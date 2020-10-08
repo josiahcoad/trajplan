@@ -9,6 +9,7 @@ import json
 arr = np.array
 # TODO: make velocity tracking an optimization instead of constraint
 
+
 def product(xs, repeat): return list(product_(xs, repeat=repeat))
 
 
@@ -46,7 +47,8 @@ class State:
         self.speed_lim = speed_lim if speed_lim is not None \
             else self._gen_speed(depth)
         # descritized "vertically" by tau
-        self.dyna_obs = dyna_obs if dyna_obs is not None else np.zeros(shape=(300, depth, width)) # self._gen_dyna()
+        self.dyna_obs = dyna_obs if dyna_obs is not None else np.zeros(
+            shape=(300, depth, width))  # self._gen_dyna()
 
     def _gen_static(self, dist):
         return np.random.binomial(1, 0.2, size=(dist, self.width))
@@ -193,7 +195,7 @@ class NoPathError(Exception):
         print(state.static_obs)
 
 
-def get_behav(state, weights=None):
+def get_freespace(state, weights=None):
     """
     choose action (i.e. behavior trajectory) that minimizes cost
     """
@@ -207,15 +209,19 @@ def get_behav(state, weights=None):
     vels = np.maximum(np.ones(vels.shape, dtype=int)*.1, vels)
     vels = np.unique([tuple(v) for v in vels], axis=0)
 
-    paths = open_paths(state, paths)
-    Cfree = [([state.pos, *path], [state.vel, *vel], behav_cost(state, [path, vel], weights))
-             for path in paths for vel in open_vels(state, path, vels)]
-    if len(Cfree) == 0:
-        raise NoPathError(state)
-    p, v, c = min(Cfree, key=lambda xs: xs[2])
-    return [arr(p), arr(v), c]
+    opaths = open_paths(state, paths)
+    return [[path, vel] for path in opaths
+             for vel in open_vels(state, path, vels)]
 
-    # convert to absolute
+
+def get_behav(state, weights=None):
+    freespace = get_freespace(state)
+    if len(freespace) == 0:
+        raise NoPathError(state)
+
+    def cost(action): return behav_cost(state, action, weights)
+    p, v = min(freespace, key=cost)
+    return [p, v]
 
 
 def safe(state, action):
@@ -241,6 +247,9 @@ def behav_cost(prv_state, action, weights=None, verbose=False):
     # TODO: should we penalize centripedal acceleration in add. to constraining?
     # TODO: use prev_state speed limit or curr_state?
     path_, vel_ = action
+
+    if any(path_ < 0) or any(path_ >= prv_state.width):  # planned outside sensor range
+        return 100
 
     vel = arr([prv_state.vel, *vel_])
     path = arr([prv_state.pos, *path_])
@@ -268,7 +277,8 @@ def behav_cost(prv_state, action, weights=None, verbose=False):
     if verbose:
         print(action)
         print(dict(zip(['fr', 'fa', 'fj'], arr([fr, fa, fj]).round(1))))
-        print(dict(zip(['fd', 'fk', 'fl', 'fc'], arr([fd, fk, fl, fc]).round(1))))
+        print(dict(zip(['fd', 'fk', 'fl', 'fc'],
+                       arr([fd, fk, fl, fc]).round(1))))
 
     return np.dot([fr, fa, fj, fd, fk, fl, fc], weights)
 

@@ -19,10 +19,9 @@ from scipy.optimize import least_squares, minimize
 arr = np.array
 w = 0 # 0=seed (), 1=straight line (no curve)
 
-def get_seed(path, return_spline=False):
-    x = np.cumsum(np.ones(len(path))*layer_dist) - layer_dist
-    cs = CubicSpline(x, path)
-    xs = np.arange(0, x[-1]+.1, .1)
+def get_seed(xs, path, return_spline=False):
+    cs = CubicSpline(xs, path)
+    xs = np.linspace(xs[0], xs[-1], 100)
     ys = cs(xs)
     seed = arr([xs, ys]).T
     if return_spline:
@@ -48,11 +47,11 @@ def get_optim(seed):
     return p_opt
 
 if __name__ == '__main__':
-    state = State()
+    state = State(3, 3)
     state.load()
-    path, vel, cost = get_behav(state)
+    path, vel = get_behav(state)
     x = np.cumsum(np.ones(len(path))*layer_dist) - layer_dist
-    seed = get_seed(path)
+    seed = get_seed(x, path)
     p_opt = get_optim(seed)
     plt.scatter(x, path, label='waypoints')
     plt.plot(*seed.T, label='seed')
