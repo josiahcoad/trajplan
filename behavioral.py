@@ -101,10 +101,11 @@ class State:
         # rounding error problem?
         return np.repeat(seed, np.rint(tau * dt).astype(int), axis=0)
 
-    def as_space(self):
+    @property
+    def obs(self):
         return np.concatenate([[self.pos, self.vel],
-                               self.road.flatten(), self.static_obs.flatten(),
-                               self.dyna_obs.flatten(), self.speed_lim.flatten()])
+                               self.static_obs.flatten(),
+                               self.speed_lim.flatten()])
 
     def as_dict(self):
         return {
@@ -219,7 +220,9 @@ def get_behav(state, weights=None):
     if len(freespace) == 0:
         raise NoPathError(state)
 
-    def cost(action): return behav_cost(state, action, weights)
+    def cost(action):
+        return behav_cost(state, action, weights)
+    
     p, v = min(freespace, key=cost)
     return [p, v]
 

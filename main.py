@@ -7,9 +7,13 @@ from matplotlib.patches import Rectangle
 import gym
 from gym import spaces
 from copy import deepcopy
+from stable_baselines import SAC
+from stable_baselines.common.cmd_util import make_vec_env
+
 arr = np.array
 concat = np.concatenate
-
+SEED = 0
+np.random.seed(SEED)
 tol = 0.3 # max (abs) distance we allow the projection to be off
 
 def project(state, action):
@@ -18,42 +22,49 @@ def project(state, action):
     if len(freespace) == 0:
         raise NoPathError(state)
 
-    # print(freespace)
     idx = np.argmin(sum((freespace-action)**2))
     freetraj = freespace[idx]
-    # print('prop:', action)
-    # print('free:', freetraj)
     if np.max(np.abs(action - freetraj)) > tol:
         return [freetraj[0].astype(int), freetraj[1]]
-    # print('chose well')
     return action
 
+def postprocess_action(state, dp, dv):
+    p = np.cumsum(dp.round()) + env.state.pos
+    v = np.cumsum(dv) + env.state.vel
+    action = arr([p.astype(int), v])
+    return project(state, action)
 
 class Env(gym.Env):
-    def __init__(self):
-        depth=3
-        width=4
-        self.action_space = spaces.Box(-1, 1, shape=(2, depth))
-        self.state = State(width=width, depth=depth)
+    depth=3
+    width=4
+    def __init__(self, save_history=False):
+        self.save_history = save_history
+        self.history = []
+        self.action_space = spaces.Box(-1, 1, shape=(2, self.depth))
+        self.reset()
         # self.state.load()
         self.state.save()
-        self.observation_space = spaces.Box(-1, 1, (len(self.state.as_space()),))
-        self.history = []
+        self.observation_space = spaces.Box(-1, 1, self.state.obs.shape)
 
     def reset(self):
-        self.state = State(width=width, depth=3)
+        self.state = State(width=self.width, depth=self.depth)
+        return self.state.obs
 
-    def step(self, action):
+    def step(self, action, processed=False):
+        if not processed:
+            action = postprocess_action(env.state, *action)
         # travel 1 distance (layer) along planned trajectory
-        self.history.append((deepcopy(self.state), deepcopy(action)))
-        rew = behav_cost(self.state, action)
+        if self.save_history:
+            self.history.append((deepcopy(self.state), deepcopy(action)))
+        cost = behav_cost(self.state, action)
         path, vel = action
         self.state.pos = path[0]
         self.state.vel = vel[0]
         self.state.step(1)
-        return (self.state, -rew, False)
+        return self.state.obs, -cost, False, {}
 
-    def render(self, action):
+    def render(self, daction):
+        action = postprocess_action(env.state, *daction)
         plot(self.state, action)
 
 
@@ -121,28 +132,34 @@ def plot_eps(history):
     plt.show()
 
 
-def action_adjust(state, dp, dv):
-    p = np.cumsum(dp.round()) + env.state.pos
-    v = np.cumsum(dv) + env.state.vel
-    action = arr([p.astype(int), v])
-    return project(state, action)
-
-
 if __name__ == '__main__':
-    env = Env()
+    # training
+    # env = make_vec_env(Env, n_envs=1, seed=SEED) 
+    # agent = SAC('MlpPolicy', env, verbose=1, seed=SEED)
+    # agent.learn(100_000)
+    # agent.save('SAC')
+
+    # testing
+    method = 'rule'
+    env = Env(save_history=True)
     tr = 0
     done = False
     i = 0
+    obs = env.reset()
     while not done:
-        # [fr, fa, fj, fd, fk, fl, fc]
-        action = get_behav(env.state, weights=[1,1,1,1,1,1,1])
-        # dp, dv = env.action_space.sample()
-        # action = action_adjust(env.state, dp, dv)
-        # env.render(action)
-        state, rew, done = env.step(action)
+        if method == 'rule':
+            # [fr, fa, fj, fd, fk, fl, fc]
+            action = get_behav(env.state, weights=[.1,1,1,1,1,10,1])
+        elif method == 'random':
+            action = env.action_space.sample()
+        elif method == 'rl':
+            action = agent.predict(obs)
+        env.render(action)
+        obs, rew, done, _ = env.step(action, processed=(method=='rule'))
         tr += rew
         i += 1
         if i == 10:
             break
-    plot_eps(env.history)
+    if env.save_history:
+        plot_eps(env.history)
     print(tr)
