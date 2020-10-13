@@ -1,6 +1,6 @@
 from behavioral import get_behav, behav_cost, get_freespace, NoPathError
 from state import State
-from constants import LAYER_DIST, SEED
+from constants import LAYER_DIST
 from motion import get_spline
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,7 +11,6 @@ from copy import deepcopy
 
 arr = np.array
 concat = np.concatenate
-np.random.seed(SEED)
 
 
 def project(state, action):
@@ -75,9 +74,8 @@ class Env(gym.Env):
         super().__init__()
         self.save_history = save_history
         self.history = []
-        self.action_space = spaces.Box(-1, 1, shape=(2*self.depth,))
         self.reset()
-        self.state.save()
+        self.action_space = spaces.Box(-1, 1, shape=(2*self.depth,))
         self.observation_space = spaces.Box(0, 5, self.state.obs.shape)
 
     def reset(self):

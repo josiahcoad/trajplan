@@ -1,14 +1,14 @@
 #pylint: disable=not-an-iterable
 from copy import deepcopy
 import numpy as np
-from itertools import product as product_
+from itertools import product
 from constants import MAX_CA, TAU, LAYER_DIST
 from state import State
 arr = np.array
 # TODO: make velocity tracking an optimization instead of constraint
 
 
-def product(xs, repeat): return list(product_(xs, repeat=repeat))
+def combinations(xs, repeat): return list(product(xs, repeat=repeat))
 
 
 def idx_exists(idx, array):
@@ -65,6 +65,7 @@ def open_paths(state, paths):
 def open_vels(state, path, vels):
     return [vel for vel in vels if open_vel(state, path, vel)]
 
+
 class NoPathError(Exception):
     def __init__(self, state):
         pass
@@ -75,8 +76,8 @@ def get_freespace(state):
     choose action (i.e. behavior trajectory) that minimizes cost
     """
     # convert relative action space to absolute space
-    lat_moves = product([-1, 0, 1], state.depth)
-    vel_moves = product([-1, 0, 1], state.depth)
+    lat_moves = combinations([-1, 0, 1], state.depth)
+    vel_moves = combinations([-1, 0, 1], state.depth)
     paths = np.cumsum(lat_moves, axis=1) + state.pos.round().astype(int)
     vels = np.cumsum(vel_moves, axis=1) + state.vel.round().astype(int)
 
@@ -85,8 +86,9 @@ def get_freespace(state):
     vels = np.unique([tuple(v) for v in vels], axis=0)
 
     opaths = open_paths(state, paths)
-    return [[path, vel] for path in opaths
-            for vel in open_vels(state, path, vels)]
+    return list(product(opaths, vels))
+    # return [[path, vel] for path in opaths
+    #         for vel in open_vels(state, path, vels)]
 
 
 def get_behav(state, weights=None, absolute=False):
@@ -128,10 +130,10 @@ def behav_cost(state, action, weights=None, verbose=False):
     weights = weights if weights is not None else np.ones(shape=7)
     # TODO: should we penalize centripedal acceleration in add. to constraining?
     # TODO: use prev_state speed limit or curr_state?
-    # TODO: penalize velocity instead of constraint
     path_, vel_ = action
 
-    if any(path_ < 0) or any(path_ >= state.width):  # planned outside sensor range
+    # TODO: how to handle planned outside sensor range
+    if any(path_ < 0) or any(path_ >= state.width): 
         return 100
 
     vel = arr([state.vel, *vel_])
@@ -143,12 +145,12 @@ def behav_cost(state, action, weights=None, verbose=False):
     vel_err = vel_ - ref_vel
     # TODO: right way to handle accel negative?
     accel = np.where(np.diff(vel) < 0, -1, 1) * \
-        np.diff(vel)**2/(2*dists)
+            np.diff(vel)**2/(2*dists)
     jerk = accel - accel[1]  # TODO... must divide by t? (instantenous)
     curv = np.diff(dpath) / LAYER_DIST
     cacc = curv * vel_[:-1]**2
 
-    fr = sum(np.abs(vel_err))
+    fr = sum(np.abs(np.where(vel_err < 0, vel_err, vel_err*2)))
     fa = sum(np.abs(accel))
     fj = sum(np.abs(jerk))
 
@@ -164,3 +166,14 @@ def behav_cost(state, action, weights=None, verbose=False):
                        arr([fd, fk, fl, fc]).round(1))))
 
     return np.dot([fr, fa, fj, fd, fk, fl, fc], weights)
+
+
+def test():
+    state = State(3, 3)
+    state.load()
+    print(state)
+    behav_cost(state, arr([[0,1,2], [3,4,4]]), verbose=True)
+    behav_cost(state, arr([[0,1,2], [3,3,3]]), verbose=True)
+
+if __name__ == '__main__':
+    test()

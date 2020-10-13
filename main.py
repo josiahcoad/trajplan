@@ -1,4 +1,4 @@
-from behavioral import get_behav, behav_cost
+from behavioral import get_behav, behav_cost, NoPathError
 from state import State
 from constants import SEED
 from motion import get_spline
@@ -9,9 +9,10 @@ from stable_baselines import SAC
 from stable_baselines.common.cmd_util import make_vec_env
 from env import Env
 
+
 arr = np.array
 concat = np.concatenate
-np.random.seed(SEED)
+# np.random.seed(SEED)
 
 
 def plot_eps(history):
@@ -26,7 +27,7 @@ def plot_eps(history):
         for j in range(epspeed.shape[1]):
             ax1.add_patch(Rectangle(((i+.5), (j-.5)), 1, 1,
                                     alpha=epspeed[i, j]/10, color='red', zorder=-1))
-            ax1.text((i+.5), (j-.5), epspeed[i, j].round())
+            ax1.text((i+.5), (j-.5), epspeed[i, j].round().astype(int))
             if epstatic[i, j]:
                 ax1.add_patch(Rectangle(((i+.5), (j-.5)), 1, 1))
 
@@ -48,6 +49,7 @@ def plot_eps(history):
         ax2.plot(xs, spline(xs, 2), color='red',
                  label='jrk' if i == 0 else None)
     ax2.legend()
+    ax2.set_xlim(*ax1.get_xlim())
 
     plt.show()
 
@@ -59,34 +61,49 @@ def train():
     agent.save('SAC')
 
 
-def test(method, render_step=False):
-    if method == 'rl':
-        agent = SAC.load('SAC')
+def test(agent=None, render_step=False):
+    method = 'rl' if agent else 'rule'
     env = Env(save_history=True)
-    done = False
     obs = env.reset()
+    done = False
+    blocked = False
     tr = 0
     i = 0
     while not done:
         if method == 'rule':
             # [fr, fa, fj, fd, fk, fl, fc]
-            action = get_behav(env.state, weights=[.1, 1, 1, 1, 1, 10, 1])
+            try:
+                action = get_behav(env.state, weights=[1, 1, 1, 1, 1, 1, 1])
+            except NoPathError:
+                blocked = True
         elif method == 'random':
             action = env.action_space.sample()
         elif method == 'rl':
             action, _ = agent.predict(obs)
         if render_step:
             env.render(action)
-        obs, rew, done, _ = env.step(action)
-        print(rew)
+        if blocked:
+            obs, rew, done = env.state.obs, 0, True
+        else:
+            obs, rew, done, _ = env.step(action)
         tr += rew
         i += 1
-        # if i == 10:
-        #     break
-    if env.save_history:
+    if env.history:
         plot_eps(env.history)
-    print(tr)
+    return tr, i
 
 
 if __name__ == '__main__':
-    test('rl')
+    import time
+    agent = SAC.load('SAC')
+    # np.random.seed(int(time.time()))
+
+    start = time.time()
+    scores = []
+    for _ in range(2):
+        score, eplen = test(agent)
+        print(eplen, ':', round(score))
+        scores.append(score / eplen)
+    print('----------')
+    print(time.time() - start)
+    print(np.mean(scores))

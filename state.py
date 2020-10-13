@@ -20,11 +20,9 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 class State:
-    def __init__(self, width, depth, pos=None, vel=None, road=None, static_obs=None, dyna_obs=None, speed_lim=None, rseed=None):
+    def __init__(self, width, depth, pos=None, vel=None, road=None, static_obs=None, dyna_obs=None, speed_lim=None):
         self.width = width
         self.depth = depth
-        if rseed is not None:
-            np.random.seed(rseed)
         self.pos = pos if pos is not None \
             else np.random.randint(width, dtype=np.int8)
         self.vel = vel if pos is not None \
@@ -107,7 +105,7 @@ class State:
         return {
             'pos': self.pos,
             'vel': self.vel,
-            'road': self.road,
+            # 'road': self.road,
             'static_obs': self.static_obs,
             # 'dyna_obs': self.dyna_obs,
             'speed_lim': self.speed_lim,
@@ -124,7 +122,6 @@ class State:
         self.vel = np.int16(d['vel'])
         self.road = arr(d['road'])
         self.static_obs = arr(d['static_obs'])
-        self.dyna_obs = arr(d['dyna_obs'])
         self.speed_lim = arr(d['speed_lim'])
 
     def __str__(self):
