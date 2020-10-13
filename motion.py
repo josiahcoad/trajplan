@@ -12,14 +12,16 @@ get behavior path
 """
 
 from scipy.interpolate import CubicSpline
-from behavioral import get_behav, State, layer_dist
+from behavioral import get_behav
+from state import State
+from constants import LAYER_DIST
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import least_squares, minimize
 arr = np.array
-w = 0 # 0=seed (), 1=straight line (no curve)
 
-def get_seed(xs, path, return_spline=False):
+
+def get_spline(xs, path, return_spline=False):
     cs = CubicSpline(xs, path)
     xs = np.linspace(xs[0], xs[-1], 100)
     ys = cs(xs)
@@ -31,27 +33,31 @@ def get_seed(xs, path, return_spline=False):
 
 def get_optim(seed):
     def obj(offsets, verbose=False):
+        w = 0
         p = seed + offsets.reshape(-1, 1) @ arr([0, 1]).reshape(1, -1)
-        dist = np.linalg.norm(np.diff(p, axis=0), axis=1) # 0
+        dist = np.linalg.norm(np.diff(p, axis=0), axis=1)  # 0
         u = np.diff(p, axis=0) / dist.reshape(-1, 1)
-        k = np.diff(u, axis=0) / np.min([dist[1:], dist[:-1]], axis=0).reshape(-1, 1)
+        k = np.diff(u, axis=0) / \
+            np.min([dist[1:], dist[:-1]], axis=0).reshape(-1, 1)
         if verbose:
             return np.linalg.norm(k, axis=1)
-        return w * sum(np.linalg.norm(k, axis=1)) + (1 - w) * sum(np.abs(offsets)) # fix the off by one error here
+        # fix the off by one error here
+        return w * sum(np.linalg.norm(k, axis=1)) + (1 - w) * sum(np.abs(offsets))
     offsets = np.zeros(shape=len(seed))
-    sol = least_squares(obj, offsets, bounds=[-0.5-seed[:,1], 2.5-seed[:,1]])
+    sol = least_squares(obj, offsets, bounds=[-0.5-seed[:, 1], 2.5-seed[:, 1]])
     print(sol.fun)
     print(sol.success)
     print(sol.message)
     p_opt = seed + (sol.x.reshape(-1, 1) @ arr([0, 1]).reshape(1, -1))
     return p_opt
 
+
 if __name__ == '__main__':
     state = State(3, 3)
     state.load()
     path, vel = get_behav(state)
-    x = np.cumsum(np.ones(len(path))*layer_dist) - layer_dist
-    seed = get_seed(x, path)
+    x = np.cumsum(np.ones(len(path))*LAYER_DIST) - LAYER_DIST
+    seed = get_spline(x, path)
     p_opt = get_optim(seed)
     plt.scatter(x, path, label='waypoints')
     plt.plot(*seed.T, label='seed')
