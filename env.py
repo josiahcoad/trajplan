@@ -97,7 +97,7 @@ class Env(gym.Env):
         self.state.pos = path[0]
         self.state.vel = vel[0]
         self.state.step(1)
-        return self.state.obs, -cost, False, {}
+        return self.state.obs, (25-cost)/10, False, {}
 
     def render(self, action):
         action = postprocess_action(self.state, action)

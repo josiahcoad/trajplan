@@ -1,14 +1,10 @@
-from behavioral import get_behav, behav_cost, get_freespace, NoPathError
+from behavioral import get_behav, behav_cost
 from state import State
-from constants import LAYER_DIST, SEED
+from constants import SEED
 from motion import get_spline
 import matplotlib.pyplot as plt
-import matplotlib
 import numpy as np
 from matplotlib.patches import Rectangle
-import gym
-from gym import spaces
-from copy import deepcopy
 from stable_baselines import SAC
 from stable_baselines.common.cmd_util import make_vec_env
 from env import Env
@@ -51,17 +47,17 @@ def plot_eps(history):
                  label='acc' if i == 0 else None)
         ax2.plot(xs, spline(xs, 2), color='red',
                  label='jrk' if i == 0 else None)
-    ax1.set_xlim(-1, 13)
-    ax2.set_xlim(-1, 13)
     ax2.legend()
 
     plt.show()
+
 
 def train():
     env = make_vec_env(Env, n_envs=1, seed=SEED)
     agent = SAC('MlpPolicy', env, verbose=1, seed=SEED)
     agent.learn(100_000)
     agent.save('SAC')
+
 
 def test(method, render_step=False):
     if method == 'rl':
@@ -82,13 +78,15 @@ def test(method, render_step=False):
         if render_step:
             env.render(action)
         obs, rew, done, _ = env.step(action)
+        print(rew)
         tr += rew
         i += 1
-        if i == 10:
-            break
+        # if i == 10:
+        #     break
     if env.save_history:
         plot_eps(env.history)
     print(tr)
+
 
 if __name__ == '__main__':
     test('rl')
