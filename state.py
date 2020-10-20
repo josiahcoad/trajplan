@@ -5,7 +5,6 @@ import json
 from constants import TAU
 
 arr = np.array
-# TODO: make velocity tracking an optimization instead of constraint
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
