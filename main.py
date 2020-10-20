@@ -77,9 +77,13 @@ def plot_eps(history):
     ax2.set_xlabel('path dist (s)')
     ax2.set_ylabel('heading (deg)', color=color)
     ax2.tick_params(axis='y', labelcolor=color)
+    ylim = max(ax2.get_ylim())
+    ax2.set_ylim(-ylim, ylim)
     color = 'tab:green'
     ax2twin.set_ylabel('turn', color=color) 
     ax2twin.tick_params(axis='y', labelcolor=color)
+    ylim = max(ax2twin.get_ylim())
+    ax2twin.set_ylim(-ylim, ylim)
 
     ax3.legend()
     ax3.set_xlim(*ax1.get_xlim())
@@ -98,7 +102,7 @@ def train():
 
 def test(agent=None, random=True, render_step=False, eps_plot=True):
     method = 'random' if random else ('rl' if agent else 'rule')
-    env = Env(save_history=eps_plot)
+    env = Env(save_history=eps_plot, max_steps=100, weights={'fr': 20})
     obs = env.reset()
     done = False
     blocked = False

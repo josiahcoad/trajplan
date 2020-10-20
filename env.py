@@ -70,9 +70,11 @@ class Env(gym.Env):
     depth = 3
     width = 3
 
-    def __init__(self, save_history=False):
+    def __init__(self, save_history=False, weights=None, max_steps=None):
         super().__init__()
         self.save_history = save_history
+        self.weights = weights  # used for cost function calculation
+        self.max_steps = max_steps  # stop early if reached this
         self.history = []
         self.reset()
         self.action_space = spaces.Box(-1, 1, shape=(2*self.depth,))
@@ -80,6 +82,7 @@ class Env(gym.Env):
 
     def reset(self):
         self.state = State(width=self.width, depth=self.depth)
+        self.stepn = 0
         return self.state.obs
 
     def step(self, action):
@@ -90,16 +93,20 @@ class Env(gym.Env):
         # travel 1 distance (layer) along planned trajectory
         if self.save_history:
             self.history.append((deepcopy(self.state), deepcopy(action)))
-        cost = behav_cost(self.state, action)
+        cost = behav_cost(self.state, action, self.weights)
+        cost = (25-cost)/10  # normalization of cost based on apriori knowledge
         path, vel = action
         self.state.pos = path[0]
         self.state.vel = vel[0]
         self.state.step(1)
-        return self.state.obs, (25-cost)/10, False, {}
+        self.stepn += 1
+        done = self.max_steps and self.stepn > self.max_steps
+        return self.state.obs, cost, done, {}
 
     def render(self, action):
         action = postprocess_action(self.state, action)
         plot(self.state, action)
+
 
 if __name__ == '__main__':
     from stable_baselines.common.env_checker import check_env

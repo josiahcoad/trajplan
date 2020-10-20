@@ -124,7 +124,11 @@ def behav_cost(state, action, weights=None, verbose=False):
         fj: jerk cost
         fc: centripedal acceleration cost
         # ft: time cost (?) (good to keep from setting v=0 unneccessarily)
+    expecting weights in order: ['fr', 'fa', 'fj', 'fd', 'fk', 'fl', 'fc']
     """
+    if isinstance(weights, dict):
+        keys = ['fr', 'fa', 'fj', 'fd', 'fk', 'fl', 'fc']
+        weights = [weights.get(k, 1) for k in keys]
     weights = weights if weights is not None else np.ones(shape=7)
     # TODO: should we penalize centripedal acceleration in add. to constraining?
     # TODO: use prev_state speed limit or curr_state?
