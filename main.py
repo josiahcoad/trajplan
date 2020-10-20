@@ -63,6 +63,8 @@ def plot_eps(history):
 
         # plot velocity profile
         ax3.scatter(x[0], vel[0], color='purple')
+        ax3.scatter(x[0]+1, epspeed[i][path[1]], color='orange',
+                    label='refvel' if i == 0 else None)
         vspline = get_spline(x, vel, v_bc, True)
         v_bc = vspline(x[1:2], 1)[0]
         xs = np.linspace(x[0], x[1], num=20)
@@ -92,17 +94,21 @@ def plot_eps(history):
 
 
 def train():
-    env = make_vec_env(Env, n_envs=16, seed=SEED)
-    env = Monitor(Env(), 'logs/training')
+    weights = {'fr': 1, 'fa': 0, 'fj': 0, 'fd': 0, 'fk': 0, 'fl': 0, 'fc': 0}
+    env = make_vec_env(lambda: Env(weights=weights), n_envs=16, seed=SEED)
+    # env = Monitor(Env(), 'logs/training')
     agent = PPO2('MlpPolicy', env, verbose=1, seed=SEED,
-                 tensorboard_log='logs/training')
-    agent.learn(100_000)
+                 tensorboard_log='logs/training',
+                 ent_coef=0.1, learning_rate=0.0001,
+                 nminibatches=16, n_steps=64, cliprange=0.4)
+    agent.learn(200_000)
     agent.save('PPO')
 
 
 def test(agent=None, random=True, render_step=False, eps_plot=True):
     method = 'random' if random else ('rl' if agent else 'rule')
-    env = Env(save_history=eps_plot, max_steps=100, weights={'fr': 20})
+    weights = {'fr': 1, 'fa': 0, 'fj': 0, 'fd': 0, 'fk': 0, 'fl': 0, 'fc': 0}
+    env = Env(save_history=eps_plot, max_steps=100, weights=weights)
     obs = env.reset()
     done = False
     blocked = False
@@ -112,7 +118,7 @@ def test(agent=None, random=True, render_step=False, eps_plot=True):
         if method == 'rule':
             # [fr, fa, fj, fd, fk, fl, fc]
             try:
-                action = get_behav(env.state, weights=[1, 1, 1, 1, 1, 1, 1])
+                action = get_behav(env.state, weights=weights)
             except NoPathError:
                 blocked = True
         elif method == 'random':
@@ -134,13 +140,13 @@ def test(agent=None, random=True, render_step=False, eps_plot=True):
 
 if __name__ == '__main__':
     # train()
-    # agent = PPO2.load('PPO')
+    agent = PPO2.load('PPO')
     np.random.seed(int(time.time()))
 
     start = time.time()
     scores = []
-    for _ in range(1):
-        score, eplen = test(agent=None, eps_plot=True, random=False)
+    for _ in range(2):
+        score, eplen = test(agent=agent, eps_plot=True, random=False)
         print(eplen, ':', round(score))
         scores.append(score / eplen)
     print('----------')
