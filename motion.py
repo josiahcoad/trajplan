@@ -21,13 +21,13 @@ from scipy.optimize import least_squares, minimize
 arr = np.array
 
 
-def get_spline(xs, path, return_spline=False):
-    cs = CubicSpline(xs, path)
+def get_spline(xs, path, bc, return_spline=False):
+    cs = CubicSpline(xs, path, bc_type=((1, bc), 'not-a-knot'))
+    if return_spline:
+        return cs
     xs = np.linspace(xs[0], xs[-1], 100)
     ys = cs(xs)
     seed = arr([xs, ys]).T
-    if return_spline:
-        return cs
     return seed
 
 

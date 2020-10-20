@@ -1,3 +1,5 @@
+import tensorflow as tf
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 from behavioral import get_behav, behav_cost, NoPathError
 from state import State
 from constants import SEED
@@ -5,9 +7,11 @@ from motion import get_spline
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Rectangle
-from stable_baselines import SAC
+from stable_baselines import PPO2
 from stable_baselines.common.cmd_util import make_vec_env
+import time
 from env import Env
+from stable_baselines.bench.monitor import Monitor
 
 
 arr = np.array
@@ -22,7 +26,8 @@ def plot_eps(history):
     speeds = [s.speed_lim for s in states]
     epspeed = np.vstack((speeds[0], [speed[-1] for speed in speeds[1:]]))
     epstatic = np.vstack([statics[0], [static[-1] for static in statics[1:]]])
-    _, (ax1, ax2) = plt.subplots(2, 1)
+    _, (ax1, ax2, ax3) = plt.subplots(3, 1)
+    ax2twin = ax2.twinx()  # instantiate a second axes that shares the same x-axis
     for i in range(epspeed.shape[0]):
         for j in range(epspeed.shape[1]):
             ax1.add_patch(Rectangle(((i+.5), (j-.5)), 1, 1,
@@ -32,38 +37,68 @@ def plot_eps(history):
                 ax1.add_patch(Rectangle(((i+.5), (j-.5)), 1, 1))
 
     xs = [np.arange(states[0].depth + 1) + i for i in range(len(actions))]
+    p_bc = 0 # path (starting) boundary condition (first derivative)
+    v_bc = 0 # velocity ^^
+    path_len = 0
     for i, (x, state, (path, vel)) in enumerate(zip(xs, states, actions)):
+        # plot path
         path = [state.pos] + list(path)
         vel = [state.vel] + list(vel)
         ax1.scatter(x[0], path[0], color='purple')
-        spline = get_spline(x, path, True)
+        spline = get_spline(x, path, p_bc, True)
+        p_bc = spline(x[1:2], 1)[0]
         xs = np.linspace(x[0], x[1], num=20)
-        ax1.plot(xs, spline(xs), color='green')
+        ys = spline(xs)
+        ax1.plot(xs, ys, color='green')
 
-        ax2.scatter(x[0], vel[0], color='purple')
-        spline = get_spline(x, vel, True)
+        # plot heading and steer
+        dy = np.diff(ys)
+        dx = np.diff(xs)
+        head = np.rad2deg(np.arctan2(dy, dx)) + [0]
+        deltas = [0] + np.sqrt(dx**2 + dy**2)
+        dists = np.cumsum(deltas) + path_len
+        ax2.plot(dists, head, color='blue')
+        path_len = dists[-1]
+        ax2twin.plot(dists[1:], np.diff(head), color='green')
+
+        # plot velocity profile
+        ax3.scatter(x[0], vel[0], color='purple')
+        vspline = get_spline(x, vel, v_bc, True)
+        v_bc = vspline(x[1:2], 1)[0]
         xs = np.linspace(x[0], x[1], num=20)
-        ax2.plot(xs, spline(xs), color='blue', label='vel' if i == 0 else None)
-        ax2.plot(xs, spline(xs, 1), color='green',
+        ax3.plot(xs, vspline(xs), color='blue',
+                label='vel' if i == 0 else None)
+        ax3.plot(xs, vspline(xs, 1), color='green',
                  label='acc' if i == 0 else None)
-        ax2.plot(xs, spline(xs, 2), color='red',
+        ax3.plot(xs, vspline(xs, 2), color='red',
                  label='jrk' if i == 0 else None)
-    ax2.legend()
-    ax2.set_xlim(*ax1.get_xlim())
+
+    color = 'tab:blue'
+    ax2.set_xlabel('path dist (s)')
+    ax2.set_ylabel('heading (deg)', color=color)
+    ax2.tick_params(axis='y', labelcolor=color)
+    color = 'tab:green'
+    ax2twin.set_ylabel('turn', color=color) 
+    ax2twin.tick_params(axis='y', labelcolor=color)
+
+    ax3.legend()
+    ax3.set_xlim(*ax1.get_xlim())
 
     plt.show()
 
 
 def train():
-    env = make_vec_env(Env, n_envs=1, seed=SEED)
-    agent = SAC('MlpPolicy', env, verbose=1, seed=SEED)
+    env = make_vec_env(Env, n_envs=16, seed=SEED)
+    env = Monitor(Env(), 'logs/training')
+    agent = PPO2('MlpPolicy', env, verbose=1, seed=SEED,
+                 tensorboard_log='logs/training')
     agent.learn(100_000)
-    agent.save('SAC')
+    agent.save('PPO')
 
 
-def test(agent=None, render_step=False):
-    method = 'rl' if agent else 'rule'
-    env = Env(save_history=True)
+def test(agent=None, random=True, render_step=False, eps_plot=True):
+    method = 'random' if random else ('rl' if agent else 'rule')
+    env = Env(save_history=eps_plot)
     obs = env.reset()
     done = False
     blocked = False
@@ -94,16 +129,18 @@ def test(agent=None, render_step=False):
 
 
 if __name__ == '__main__':
-    import time
-    agent = SAC.load('SAC')
-    # np.random.seed(int(time.time()))
+    # train()
+    # agent = PPO2.load('PPO')
+    np.random.seed(int(time.time()))
 
     start = time.time()
     scores = []
-    for _ in range(2):
-        score, eplen = test(agent)
+    for _ in range(1):
+        score, eplen = test(agent=None, eps_plot=True, random=False)
         print(eplen, ':', round(score))
         scores.append(score / eplen)
     print('----------')
     print(time.time() - start)
     print(np.mean(scores))
+    # plt.plot(scores)
+    # plt.show()
