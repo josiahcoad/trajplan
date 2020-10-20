@@ -5,7 +5,6 @@ from itertools import product
 from constants import MAX_CA, TAU, LAYER_DIST
 from state import State
 arr = np.array
-# TODO: make velocity tracking an optimization instead of constraint
 
 
 def combinations(xs, repeat): return list(product(xs, repeat=repeat))
@@ -118,14 +117,13 @@ def behav_cost(state, action, weights=None, verbose=False):
     path cost
         fd: distance
         fk: curvature cost
-        fe: centripdal acc cost (bending energy?)
         fl: lane crossings
     speed cost
         fr: reference cost
         fa: acceleration cost
         fj: jerk cost
         fc: centripedal acceleration cost
-        ft: time cost (?) (good to keep from setting v=0 unneccessarily)
+        # ft: time cost (?) (good to keep from setting v=0 unneccessarily)
     """
     weights = weights if weights is not None else np.ones(shape=7)
     # TODO: should we penalize centripedal acceleration in add. to constraining?
