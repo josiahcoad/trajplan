@@ -94,14 +94,14 @@ class Env(gym.Env):
         if self.save_history:
             self.history.append((deepcopy(self.state), deepcopy(action)))
         cost = behav_cost(self.state, action, self.weights)
-        cost = (25-cost)/10  # normalization of cost based on apriori knowledge
+        reward = (25-cost)/10  # normalization of cost based on apriori knowledge
         path, vel = action
         self.state.pos = path[0]
         self.state.vel = vel[0]
         self.state.step(1)
         self.stepn += 1
         done = self.max_steps and self.stepn > self.max_steps
-        return self.state.obs, cost, done, {}
+        return self.state.obs, reward, done, {}
 
     def render(self, action):
         action = postprocess_action(self.state, action)
