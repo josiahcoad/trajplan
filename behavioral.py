@@ -125,6 +125,7 @@ def behav_cost(state, action, weights=None, verbose=False):
         fc: centripedal acceleration cost
         # ft: time cost (?) (good to keep from setting v=0 unneccessarily)
     expecting weights in order: ['fr', 'fa', 'fj', 'fd', 'fk', 'fl', 'fc']
+    action should be absolute action
     """
     if isinstance(weights, dict):
         keys = ['fr', 'fa', 'fj', 'fd', 'fk', 'fl', 'fc']
@@ -134,13 +135,14 @@ def behav_cost(state, action, weights=None, verbose=False):
     # TODO: use prev_state speed limit or curr_state?
     path_, vel_ = action
 
-    # TODO: how to handle planned outside sensor range
+    # TODO: how to handle planned outside sensor range?
     if any(path_ < 0) or any(path_ >= state.width): 
         return 100
 
     vel = arr([state.vel, *vel_])
     path = arr([state.pos, *path_])
     dpath = np.diff(path)
+    lchange = (np.diff(path.round()) != 0) # TODO: make not hard coded (e.g. what if lanes not 1 thick?)
     dists = np.sqrt(dpath**2 + LAYER_DIST**2)
     ref_vel = arr([state.speed_lim[i, int(round(p))] for i, p in enumerate(path_)])
 
@@ -148,7 +150,7 @@ def behav_cost(state, action, weights=None, verbose=False):
     # TODO: right way to handle accel negative?
     accel = np.where(np.diff(vel) < 0, -1, 1) * \
             np.diff(vel)**2/(2*dists)
-    jerk = accel - accel[1]  # TODO... must divide by t? (instantenous)
+    jerk = accel - accel[1]  # TODO: must divide by t? (but instantenous...)
     curv = np.diff(dpath) / LAYER_DIST
     cacc = curv * vel_[:-1]**2
 
@@ -159,7 +161,7 @@ def behav_cost(state, action, weights=None, verbose=False):
 
     fd = sum(dists) - state.depth
     fk = sum(np.abs(curv))
-    fl = sum(dpath != 0)
+    fl = sum(lchange)
     fc = sum(np.abs(cacc))
 
     if verbose:
@@ -175,8 +177,7 @@ def test():
     state = State(3, 3)
     state.load()
     print(state)
-    behav_cost(state, arr([[0,1,2], [3,4,4]]), verbose=True)
-    behav_cost(state, arr([[0,1,2], [3,3,3]]), verbose=True)
+    print(behav_cost(state, arr([[0,1,2], [3,4,4]]), verbose=True))
 
 if __name__ == '__main__':
     test()
