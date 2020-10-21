@@ -7,7 +7,7 @@ from motion import get_spline
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Rectangle
-from stable_baselines import PPO2
+from stable_baselines import SAC
 from stable_baselines.common.cmd_util import make_vec_env
 import time
 from env import Env
@@ -63,7 +63,7 @@ def plot_eps(history):
 
         # plot velocity profile
         ax3.scatter(x[0], vel[0], color='purple')
-        ax3.scatter(x[0]+1, epspeed[i][path[1]], color='orange',
+        ax3.scatter(x[0]+1, epspeed[i][int(round(path[1]))], color='orange',
                     label='refvel' if i == 0 else None)
         vspline = get_spline(x, vel, v_bc, True)
         v_bc = vspline(x[1:2], 1)[0]
@@ -93,22 +93,19 @@ def plot_eps(history):
     plt.show()
 
 
-def train():
-    weights = {'fr': 1, 'fa': 0, 'fj': 0, 'fd': 0, 'fk': 0, 'fl': 0, 'fc': 0}
-    env = make_vec_env(lambda: Env(weights=weights), n_envs=16, seed=SEED)
-    # env = Monitor(Env(), 'logs/training')
-    agent = PPO2('MlpPolicy', env, verbose=1, seed=SEED,
-                 tensorboard_log='logs/training',
-                 ent_coef=0.1, learning_rate=0.0001,
-                 nminibatches=16, n_steps=64, cliprange=0.4)
-    agent.learn(200_000)
-    agent.save('PPO')
+def train(agent=None):
+    env = Monitor(Env(), 'logs/training')
+    if agent:
+        agent.set_env(env)
+    else:
+        agent = SAC('MlpPolicy', env, verbose=True)
+    agent.learn(1_000_000)
+    agent.save('SAC')
 
 
-def test(agent=None, random=True, render_step=False, eps_plot=True):
+def test(agent=None, random=False, render_step=False, eps_plot=True):
     method = 'random' if random else ('rl' if agent else 'rule')
-    weights = {'fr': 1, 'fa': 0, 'fj': 0, 'fd': 0, 'fk': 0, 'fl': 0, 'fc': 0}
-    env = Env(save_history=eps_plot, max_steps=100, weights=weights)
+    env = Env(save_history=eps_plot, max_steps=100)
     obs = env.reset()
     done = False
     blocked = False
@@ -118,7 +115,7 @@ def test(agent=None, random=True, render_step=False, eps_plot=True):
         if method == 'rule':
             # [fr, fa, fj, fd, fk, fl, fc]
             try:
-                action = get_behav(env.state, weights=weights)
+                action = get_behav(env.state)
             except NoPathError:
                 blocked = True
         elif method == 'random':
@@ -139,18 +136,19 @@ def test(agent=None, random=True, render_step=False, eps_plot=True):
 
 
 if __name__ == '__main__':
+    agent = SAC.load('SAC_best')
     # train()
-    agent = PPO2.load('PPO')
     np.random.seed(int(time.time()))
 
     start = time.time()
     scores = []
     for _ in range(2):
-        score, eplen = test(agent=agent, eps_plot=True, random=False)
+        score, eplen = test(agent=agent, eps_plot=True)
         print(eplen, ':', round(score))
         scores.append(score / eplen)
     print('----------')
     print(time.time() - start)
+    scores = arr(scores)[arr(scores) != 0]
     print(np.mean(scores))
     # plt.plot(scores)
     # plt.show()

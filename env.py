@@ -13,25 +13,27 @@ arr = np.array
 concat = np.concatenate
 
 
-def project(state, action):
-    TOL = -1  # max (abs) distance we allow the projection to be off
-    # TODO: TOL must be below 0.5, else rounding in get_freespace could be a prob
+def project(state, proposal):
+    # TOL must be below 0.5, else we'd round to a different cell
+    TOL = .5  # max (abs) distance we allow the projection to be off
     freespace = arr(get_freespace(state))
     if len(freespace) == 0:
         raise NoPathError(state)
 
-    idx = np.argmin(((freespace-action)**2).sum(1).sum(1))
+    idx = np.argmin(((freespace-proposal)**2).sum(1).sum(1))
     freetraj = freespace[idx]
-    if np.max(np.abs(action - freetraj)) > TOL:
-        return [freetraj[0].astype(int), freetraj[1]]
-    return action
+    if np.max(np.abs(proposal - freetraj)) > TOL:
+        # our proposal was too far from the freespace.
+        residual = ((freetraj-proposal)**2).sum()
+        return freetraj, residual
+    return proposal, 0
 
 
 def postprocess_action(state, action):
     dp, dv = np.split(action, 2)
-    p = np.cumsum(dp.round()) + state.pos
+    p = np.cumsum(dp) + state.pos
     v = np.cumsum(dv) + state.vel
-    action = arr([p.astype(int), v])
+    action = arr([p, v])
     return project(state, action)
 
 
@@ -87,20 +89,20 @@ class Env(gym.Env):
 
     def step(self, action):
         try:
-            action = postprocess_action(self.state, action)
+            action, residual = postprocess_action(self.state, action)
         except NoPathError:
             return self.state.obs, 0, True, {}
         # travel 1 distance (layer) along planned trajectory
         if self.save_history:
             self.history.append((deepcopy(self.state), deepcopy(action)))
-        cost = behav_cost(self.state, action, self.weights)
-        reward = (25-cost)/10  # normalization of cost based on apriori knowledge
+        bcost = behav_cost(self.state, action, self.weights)
+        reward = (25-bcost)/10 - residual # normalization of cost based on apriori knowledge
         path, vel = action
         self.state.pos = path[0]
         self.state.vel = vel[0]
         self.state.step(1)
         self.stepn += 1
-        done = self.max_steps and self.stepn > self.max_steps
+        done = self.stepn >= self.max_steps if self.max_steps else False
         return self.state.obs, reward, done, {}
 
     def render(self, action):

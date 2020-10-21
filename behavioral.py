@@ -142,7 +142,7 @@ def behav_cost(state, action, weights=None, verbose=False):
     path = arr([state.pos, *path_])
     dpath = np.diff(path)
     dists = np.sqrt(dpath**2 + LAYER_DIST**2)
-    ref_vel = arr([state.speed_lim[i, p] for i, p in enumerate(path_)])
+    ref_vel = arr([state.speed_lim[i, int(round(p))] for i, p in enumerate(path_)])
 
     vel_err = vel_ - ref_vel
     # TODO: right way to handle accel negative?
