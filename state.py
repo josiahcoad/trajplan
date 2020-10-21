@@ -119,7 +119,6 @@ class State:
             d = json.loads(f.read())
         self.pos = np.int16(d['pos'])
         self.vel = np.int16(d['vel'])
-        self.road = arr(d['road'])
         self.static_obs = arr(d['static_obs'])
         self.speed_lim = arr(d['speed_lim'])
 
