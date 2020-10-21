@@ -12,6 +12,7 @@ from stable_baselines.common.cmd_util import make_vec_env
 import time
 from env import Env
 from stable_baselines.bench.monitor import Monitor
+from stable_baselines.common.callbacks import EvalCallback
 
 
 arr = np.array
@@ -94,12 +95,15 @@ def plot_eps(history):
 
 
 def train(agent=None):
+    eval_callback = EvalCallback(Env(), best_model_save_path='logs/models',
+                             log_path='logs', eval_freq=20000,
+                             deterministic=True, render=False)
     env = Monitor(Env(), 'logs/training')
     if agent:
         agent.set_env(env)
     else:
         agent = SAC('MlpPolicy', env, verbose=True)
-    agent.learn(1_000_000)
+    agent.learn(200_000, callback=eval_callback)
     agent.save('SAC')
 
 
@@ -136,8 +140,8 @@ def test(agent=None, random=False, render_step=False, eps_plot=True):
 
 
 if __name__ == '__main__':
-    agent = SAC.load('SAC_best')
-    # train()
+    agent = SAC.load('SAC')
+    # train(agent)
     np.random.seed(int(time.time()))
 
     start = time.time()
