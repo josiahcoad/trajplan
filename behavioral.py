@@ -142,7 +142,7 @@ def behav_cost(state, action, weights=None, verbose=False):
     vel = arr([state.vel, *vel_])
     path = arr([state.pos, *path_])
     dpath = np.diff(path)
-    lchange = (np.diff(path.round()) != 0) # TODO: make not hard coded (e.g. what if lanes not 1 thick?)
+    lchange = np.abs(np.diff(path.round())) # TODO: make not hard coded (e.g. what if lanes not 1 thick?)
     dists = np.sqrt(dpath**2 + LAYER_DIST**2)
     ref_vel = arr([state.speed_lim[i, int(round(p))] for i, p in enumerate(path_)])
 
