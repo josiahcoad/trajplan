@@ -59,8 +59,9 @@ def plot_eps(history):
         deltas = [0] + np.sqrt(dx**2 + dy**2)
         dists = np.cumsum(deltas) + path_len
         ax2.plot(dists, head, color='blue')
+        steers = np.diff(head) / 10
+        ax2twin.plot(dists[1:], steers, color='green')
         path_len = dists[-1]
-        ax2twin.plot(dists[1:], np.diff(head), color='green')
 
         # plot velocity profile
         ax3.scatter(x[0], vel[0], color='purple')
@@ -80,13 +81,11 @@ def plot_eps(history):
     ax2.set_xlabel('path dist (s)')
     ax2.set_ylabel('heading (deg)', color=color)
     ax2.tick_params(axis='y', labelcolor=color)
-    ylim = max(ax2.get_ylim())
-    ax2.set_ylim(-ylim, ylim)
+    ax2.set_ylim(-75, 75)
     color = 'tab:green'
     ax2twin.set_ylabel('turn', color=color) 
     ax2twin.tick_params(axis='y', labelcolor=color)
-    ylim = max(ax2twin.get_ylim())
-    ax2twin.set_ylim(-ylim, ylim)
+    ax2twin.set_ylim(-1, 1)
 
     ax3.legend()
     ax3.set_xlim(*ax1.get_xlim())
@@ -141,7 +140,7 @@ def test(agent=None, random=False, render_step=False, eps_plot=True):
 
 if __name__ == '__main__':
     agent = SAC.load('SAC')
-    # train(agent)
+    # train(agent)  
     np.random.seed(int(time.time()))
 
     start = time.time()
