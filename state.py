@@ -103,7 +103,8 @@ class State:
         self.vel = obs[1]
         l = len(self.static_obs.flatten())
         self.static_obs = obs[2:l+2].reshape(self.static_obs.shape)
-        self.static_obs = obs[l+2:].reshape(self.speed_lim.shape)
+        self.speed_lim = obs[l+2:].reshape(self.speed_lim.shape)
+        return self
 
     def as_dict(self):
         return {
