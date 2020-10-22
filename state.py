@@ -19,13 +19,15 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 class State:
-    def __init__(self, width, depth, pos=None, vel=None, road=None, static_obs=None, dyna_obs=None, speed_lim=None):
+    def __init__(self, width, depth, pos=None, vel=None, road=None, static_obs=None, dyna_obs=None, speed_lim=None,
+                    same_speed_across=True):
         self.width = width
         self.depth = depth
+        self.same_speed_across = same_speed_across
         self.pos = pos if pos is not None \
             else np.random.randint(width, dtype=np.int8)
         self.vel = vel if pos is not None \
-            else np.random.randint(1, 4, dtype=np.int8)
+            else (np.random.randint(1, 4, dtype=np.int8))
         self.road = road if road is not None \
             else self._gen_road(depth)
         self.static_obs = static_obs if static_obs is not None \
@@ -40,6 +42,9 @@ class State:
         return np.random.binomial(1, 0.2, size=(dist, self.width))
 
     def _gen_speed(self, dist):
+        if self.same_speed_across:
+            speeds = np.clip(np.random.normal(3, 2, size=dist), 1, 5)
+            return np.tile(speeds, (self.width,1)).T
         return np.clip(np.random.normal(3, 2, size=(dist, self.width)), 1, 5)
 
     def _gen_road(self, dist):
