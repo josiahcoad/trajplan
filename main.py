@@ -1,6 +1,6 @@
 import tensorflow as tf
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-from behavioral import get_behav, behav_cost, NoPathError
+from behavioral import get_behav, NoPathError
 from state import State
 from constants import SEED
 from motion import get_spline
@@ -13,7 +13,7 @@ import time
 from env import Env
 from stable_baselines.bench.monitor import Monitor
 from stable_baselines.common.callbacks import EvalCallback
-
+import pandas as pd
 
 arr = np.array
 concat = np.concatenate
@@ -33,7 +33,7 @@ def plot_eps(history):
         for j in range(epspeed.shape[1]):
             ax1.add_patch(Rectangle(((i+.5), (j-.5)), 1, 1,
                                     alpha=epspeed[i, j]/10, color='red', zorder=-1))
-            ax1.text((i+.5), (j-.5), epspeed[i, j].round().astype(int))
+            # ax1.text((i+.5), (j-.5), epspeed[i, j].round().astype(int))
             if epstatic[i, j]:
                 ax1.add_patch(Rectangle(((i+.5), (j-.5)), 1, 1))
 
@@ -94,10 +94,11 @@ def plot_eps(history):
 
 
 def train(agent=None):
-    eval_callback = EvalCallback(Env(), best_model_save_path='logs/models',
+    weights = {'fr': 0.3}
+    eval_callback = EvalCallback(Env(weights=weights), best_model_save_path='logs/models',
                              log_path='logs', eval_freq=20000,
                              deterministic=True, render=False)
-    env = Monitor(Env(), 'logs/training')
+    env = Monitor(Env(weights=weights), 'logs/training')
     if agent:
         agent.set_env(env)
     else:
@@ -107,18 +108,20 @@ def train(agent=None):
 
 
 def test(agent=None, random=False, render_step=False, eps_plot=True):
+    weights = {'fr': 0.3}
     method = 'random' if random else ('rl' if agent else 'rule')
-    env = Env(save_history=eps_plot, max_steps=100)
+    env = Env(save_history=eps_plot, max_steps=100, weights=weights)
     obs = env.reset()
     done = False
     blocked = False
+    cost_parts = []
     tr = 0
     i = 0
     while not done:
         if method == 'rule':
             # [fr, fa, fj, fd, fk, fl, fc]
             try:
-                action = get_behav(env.state)
+                action = get_behav(env.state, weights)
             except NoPathError:
                 blocked = True
         elif method == 'random':
@@ -130,24 +133,28 @@ def test(agent=None, random=False, render_step=False, eps_plot=True):
         if blocked:
             obs, rew, done = env.state.obs, 0, True
         else:
-            obs, rew, done, _ = env.step(action)
+            obs, rew, done, parts = env.step(action)
+            cost_parts.append(parts)
         tr += rew
         i += 1
     if env.history:
+        agg_map = {'fr': 'mean', 'fa': 'max', 'fj': 'max', 'fd': 'mean',
+                'fk': 'max', 'fl': 'sum', 'fc': 'max'}
+        print(pd.DataFrame(cost_parts).agg(agg_map).round(1))
         plot_eps(env.history)
     return tr, i
 
 
 if __name__ == '__main__':
-    agent = SAC.load('SAC')
+    agent = SAC.load('SAC_best')
     # train(agent)  
     np.random.seed(int(time.time()))
-
     start = time.time()
     scores = []
     for _ in range(2):
         score, eplen = test(agent=agent, eps_plot=True)
-        print(eplen, ':', round(score))
+        print('eplen:', eplen)
+        print('score:', int(round(score)))
         scores.append(score / eplen)
     print('----------')
     print(time.time() - start)

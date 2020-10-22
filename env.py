@@ -95,7 +95,7 @@ class Env(gym.Env):
         # travel 1 distance (layer) along planned trajectory
         if self.save_history:
             self.history.append((deepcopy(self.state), deepcopy(action)))
-        bcost = behav_cost(self.state, action, self.weights)
+        bcost, parts = behav_cost(self.state, action, self.weights, return_parts=True)
         reward = (25-bcost)/10 - residual # normalization of cost based on apriori knowledge
         path, vel = action
         self.state.pos = path[0]
@@ -103,7 +103,7 @@ class Env(gym.Env):
         self.state.step(1)
         self.stepn += 1
         done = self.stepn >= self.max_steps if self.max_steps else False
-        return self.state.obs, reward, done, {}
+        return self.state.obs, reward, done, parts
 
     def render(self, action):
         action = postprocess_action(self.state, action)

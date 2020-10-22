@@ -112,7 +112,7 @@ def safe(state, action):
     return open_path(state, path) and open_vel(state, path, vel)
 
 
-def behav_cost(state, action, weights=None, verbose=False):
+def behav_cost(state, action, weights=None, return_parts=False):
     """
     path cost
         fd: distance
@@ -127,22 +127,23 @@ def behav_cost(state, action, weights=None, verbose=False):
     expecting weights in order: ['fr', 'fa', 'fj', 'fd', 'fk', 'fl', 'fc']
     action should be absolute action
     """
+    keys = ['fr', 'fa', 'fj', 'fd', 'fk', 'fl', 'fc']
     if isinstance(weights, dict):
-        keys = ['fr', 'fa', 'fj', 'fd', 'fk', 'fl', 'fc']
         weights = [weights.get(k, 1) for k in keys]
     weights = weights if weights is not None else np.ones(shape=7)
     # TODO: should we penalize centripedal acceleration in add. to constraining?
     # TODO: use prev_state speed limit or curr_state?
     path_, vel_ = action
 
-    # TODO: how to handle planned outside sensor range?
-    if any(path_ < 0) or any(path_ >= state.width): 
+    # TODO: make not hard coded (e.g. assumes lanes are 1 thick)
+    if any(path_.round() < 0) or any(path_.round() > state.width - 1):
+        print(path_)
         return 100
 
     vel = arr([state.vel, *vel_])
     path = arr([state.pos, *path_])
     dpath = np.diff(path)
-    lchange = np.abs(np.diff(path.round())) # TODO: make not hard coded (e.g. what if lanes not 1 thick?)
+    lchange = np.abs(np.diff(path.round())) # TODO: make not hard coded (e.g. assumes lanes are 1 thick)
     dists = np.sqrt(dpath**2 + LAYER_DIST**2)
     ref_vel = arr([state.speed_lim[i, int(round(p))] for i, p in enumerate(path_)])
 
@@ -164,20 +165,19 @@ def behav_cost(state, action, weights=None, verbose=False):
     fl = sum(lchange)
     fc = sum(np.abs(cacc))
 
-    if verbose:
-        print(action)
-        print(dict(zip(['fr', 'fa', 'fj'], arr([fr, fa, fj]).round(1))))
-        print(dict(zip(['fd', 'fk', 'fl', 'fc'],
-                       arr([fd, fk, fl, fc]).round(1))))
+    measures = [fr, fa, fj, fd, fk, fl, fc]
+    cost = np.dot(measures, weights)
 
-    return np.dot([fr, fa, fj, fd, fk, fl, fc], weights)
+    if return_parts:
+        return cost, dict(zip(keys, measures))
+    return cost
 
 
 def test():
     state = State(3, 3)
     state.load()
     print(state)
-    print(behav_cost(state, arr([[0,1,2], [3,4,4]]), verbose=True))
+    print(behav_cost(state, arr([[0,1,2], [3,4,4]]), return_parts=True))
 
 if __name__ == '__main__':
     test()
