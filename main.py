@@ -7,7 +7,7 @@ from motion import get_spline
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Rectangle
-from stable_baselines import SAC
+from stable_baselines import SAC, PPO2
 from stable_baselines.common.cmd_util import make_vec_env
 import time
 from env import Env
@@ -96,15 +96,19 @@ def plot_eps(history):
 def train(agent=None):
     weights = {'fr': 0.3}
     eval_callback = EvalCallback(Env(weights=weights), best_model_save_path='logs/models',
-                             log_path='logs', eval_freq=20000,
+                             log_path='logs', eval_freq=1_000,
                              deterministic=True, render=False)
-    env = Monitor(Env(weights=weights), 'logs/training')
+
+    vecenv = make_vec_env(lambda: Env(weights=weights), 32, monitor_dir='logs/training')
     if agent:
-        agent.set_env(env)
+        agent.set_env(vecenv)
     else:
-        agent = SAC('MlpPolicy', env, verbose=True)
+        hparams = dict(n_steps=64, nminibatches=32, gamma=0.95,
+                       learning_rate=2e-5, ent_coef=0.01,
+                       cliprange=0.2, noptepochs=25, lam=0.99)
+        agent = PPO2('MlpPolicy', vecenv, verbose=True, **hparams)
     agent.learn(200_000, callback=eval_callback)
-    agent.save('SAC')
+    agent.save('PPO')
 
 
 def test(agent=None, random=False, render_step=False, eps_plot=True):
@@ -146,15 +150,16 @@ def test(agent=None, random=False, render_step=False, eps_plot=True):
 
 
 if __name__ == '__main__':
-    agent = SAC.load('SAC_best')
-    # train(agent)  
+    agent = PPO2.load('best_model')
+    # train()  
     np.random.seed(int(time.time()))
     start = time.time()
     scores = []
-    for _ in range(2):
+    for _ in range(5):
         score, eplen = test(agent=agent, eps_plot=True)
         print('eplen:', eplen)
         print('score:', int(round(score)))
+        
         scores.append(score / eplen)
     print('----------')
     print(time.time() - start)
