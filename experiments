@@ -1,0 +1,84 @@
+        hparams = dict(n_steps=64, nminibatches=64, gamma=0.90,
+                        learning_rate=2e-3, ent_coef=0.05,
+                        cliprange=0.4, noptepochs=25, lam=0.99)
+# 1
+# diverged (neg). run 401K
+
+        hparams = dict(n_steps=64, nminibatches=64, gamma=0.90,
+                       learning_rate=2e-4, ent_coef=0.05,
+                       cliprange=0.4, noptepochs=25, lam=0.99)
+# 2
+# diverged (neg). run 888K
+
+
+        hparams = dict(n_steps=64, nminibatches=64, gamma=0.90,
+                       learning_rate=2e-4, ent_coef=0.05,
+                       cliprange=0.2, noptepochs=25, lam=0.99)
+# 3
+# slow (50%). run 710K
+
+        hparams = dict(n_steps=64, nminibatches=64, gamma=0.95,
+                       learning_rate=2e-4, ent_coef=0.05,
+                       cliprange=0.4, noptepochs=25, lam=0.99)
+# 4
+# slow (40%) after 200K
+
+        hparams = dict(n_steps=64, nminibatches=64, gamma=0.90,
+                       learning_rate=2e-3, ent_coef=0.01,
+                       cliprange=0.4, noptepochs=25, lam=0.99)
+# 5
+# slow (50%) after 500K
+
+        hparams = dict(n_steps=64, nminibatches=64, gamma=0.90,
+                       learning_rate=2e-4, ent_coef=0.01,
+                       cliprange=0.4, noptepochs=25, lam=0.99)
+# 6
+# ok (120%) after 2M
+
+        hparams = dict(n_steps=64, nminibatches=64, gamma=0.90,
+                       learning_rate=2e-5, ent_coef=0.05,
+                       cliprange=0.4, noptepochs=25, lam=0.99)
+# 7
+# good (120%) after 1M, (135%) after 2M (170% test)
+
+        hparams = dict(n_steps=64, nminibatches=64, gamma=0.90,
+                       learning_rate=2e-5, ent_coef=0.05,
+                       cliprange=**0.2**, noptepochs=25, lam=0.99)
+# 8 (1)
+# from 7
+# ok (100%) after 2.5M
+
+        hparams = dict(n_steps=64, nminibatches=64, gamma=**0.99**,
+                       learning_rate=2e-5, ent_coef=0.05,
+                       cliprange=0.4, noptepochs=25, lam=0.99)
+# 9 (3)
+# from 7
+# bad (12%) after 600K
+
+        hparams = dict(n_steps=64, nminibatches=64, gamma=0.90,
+                       learning_rate=2e-5, ent_coef=**0.01**,
+                       cliprange=0.4, noptepochs=25, lam=0.99)
+# 10 (2)
+# from 7
+# great (1.92 test) after 5M
+
+        hparams = dict(n_steps=64, nminibatches=**16**, gamma=0.90,
+                       learning_rate=2e-5, ent_coef=0.01,
+                       cliprange=0.4, noptepochs=25, lam=0.99)
+# 11 (3)
+# from 10
+# good (1.9 test) after 5M
+
+        hparams = dict(n_steps=64, nminibatches=64, gamma=0.90,
+                       learning_rate=2e-5, ent_coef=0.01,
+                       cliprange=**0.2**, noptepochs=25, lam=0.99)
+# 12 (1)
+# from 10
+# good (1.9 test) after 5M
+
+        SAC - base params
+
+# 13 (2)
+# ok (.95) after 5 M
+# weights = {'fr': 0.3, 'fl': 2}
+
