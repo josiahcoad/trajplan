@@ -110,11 +110,13 @@ def save_episode(env):
 
 def train(agent=None):
     weights = {'fr': 0.3, 'fl': 2, 'fk': 2}
-    eval_callback = EvalCallback(Env(weights=weights), best_model_save_path='logs/models',
+    depth, width, nlayers = 3, 3, 2
+    eval_callback = EvalCallback(Env(depth, width, nlayers, weights=weights),
+                             best_model_save_path='logs/models',
                              log_path='logs', eval_freq=1_000,
                              deterministic=True, render=False)
 
-    vecenv = make_vec_env(lambda: Env(3, 3, 2, weights=weights), 32, monitor_dir='logs/training')
+    vecenv = make_vec_env(lambda: Env(depth, width, nlayers, weights=weights), 32, monitor_dir='logs/training')
     if agent:
         agent.set_env(vecenv)
     else:
@@ -163,7 +165,7 @@ def test(agent=None, random=False, render_step=False, eps_plot=True):
 
 
 if __name__ == '__main__':
-    agent = PPO2.load('logs/models/best_model')
+    # agent = PPO2.load('logs/models/best_model')
     # train()
     np.random.seed(int(time.time()))
     start = time.time()
