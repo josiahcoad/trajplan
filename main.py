@@ -16,9 +16,6 @@ from stable_baselines.common.callbacks import EvalCallback
 import pandas as pd
 
 arr = np.array
-concat = np.concatenate
-# np.random.seed(SEED)
-
 
 def plot_eps(env):
     states = [h[0] for h in env.history]
