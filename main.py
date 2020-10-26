@@ -62,6 +62,7 @@ def plot_eps(history):
         steers = np.diff(head) / 10
         ax2twin.plot(dists[1:], steers, color='green')
         path_len = dists[-1]
+        # TODO: curve = np.diff(steers)
 
         # plot velocity profile
         ax3.scatter(x[0], vel[0], color='purple')
