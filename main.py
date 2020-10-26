@@ -22,7 +22,7 @@ concat = np.concatenate
 
 def plot_eps(history):
     states = [h[0] for h in history]
-    actions = [h[1] for h in history]
+    actions = [h[1] for h in history[:-1]] # the last action is None because we detected end of road
     statics = [s.static_obs for s in states]
     speeds = [s.speed_lim for s in states]
     epspeed = np.vstack((speeds[0], [speed[-1] for speed in speeds[1:]]))
@@ -47,7 +47,7 @@ def plot_eps(history):
         vel = [state.vel] + list(vel)
         ax1.scatter(x[0], path[0], color='purple')
         spline = get_spline(x, path, p_bc, True)
-        p_bc = spline(x[1:2], 1)[0]
+        p_bc = spline([x[1]], 1)[0]
         xs = np.linspace(x[0], x[1], num=20)
         ys = spline(xs)
         ax1.plot(xs, ys, color='green')
@@ -77,7 +77,11 @@ def plot_eps(history):
                  label='acc' if i == 0 else None)
         ax3.plot(xs, vspline(xs, 2), color='red',
                  label='jrk' if i == 0 else None)
-
+    
+    # plot last point
+    ax1.scatter(x[1], path[1], color='purple')
+    
+    # set plotting options 
     color = 'tab:blue'
     ax2.set_xlabel('path dist (s)')
     ax2.set_ylabel('heading (deg)', color=color)
@@ -92,6 +96,12 @@ def plot_eps(history):
     ax3.set_xlim(*ax1.get_xlim())
 
     plt.show()
+
+
+def save_episode(env):
+    history = env.history
+    states = arr([s[0] for s in history])
+    np.save('history.npy', states)
 
 
 def train(agent=None):
@@ -114,11 +124,11 @@ def train(agent=None):
 
 def test(agent=None, random=False, render_step=False, eps_plot=True):
     weights = {'fr': 0.3}
+    history = np.load('history.npy', allow_pickle=True)
     method = 'random' if random else ('rl' if agent else 'rule')
     env = Env(save_history=eps_plot, max_steps=100, weights=weights)
-    obs = env.reset()
+    obs = env.reset(history)
     done = False
-    blocked = False
     cost_parts = []
     tr = 0
     i = 0
@@ -128,18 +138,15 @@ def test(agent=None, random=False, render_step=False, eps_plot=True):
             try:
                 action = get_behav(env.state, weights)
             except NoPathError:
-                blocked = True
+                action = np.ones(6) # should trigger a NoPathError in env.step
         elif method == 'random':
             action = env.action_space.sample()
         elif method == 'rl':
             action, _ = agent.predict(obs)
         if render_step:
             env.render(action)
-        if blocked:
-            obs, rew, done = env.state.obs, 0, True
-        else:
-            obs, rew, done, parts = env.step(action)
-            cost_parts.append(parts)
+        obs, rew, done, parts = env.step(action)
+        cost_parts.append(parts)
         tr += rew
         i += 1
     if env.history:
@@ -147,6 +154,7 @@ def test(agent=None, random=False, render_step=False, eps_plot=True):
                 'fk': 'max', 'fl': 'sum', 'fc': 'max'}
         print(pd.DataFrame(cost_parts).agg(agg_map).round(1))
         plot_eps(env.history)
+        save_episode(env)
     return tr, i
 
 
@@ -156,11 +164,10 @@ if __name__ == '__main__':
     np.random.seed(int(time.time()))
     start = time.time()
     scores = []
-    for _ in range(5):
-        score, eplen = test(agent=agent, eps_plot=True)
+    for _ in range(1):
+        score, eplen = test(agent=None, eps_plot=True)
         print('eplen:', eplen)
         print('score:', int(round(score)))
-        
         scores.append(score / eplen)
     print('----------')
     print(time.time() - start)

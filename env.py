@@ -82,26 +82,43 @@ class Env(gym.Env):
         self.action_space = spaces.Box(-1, 1, shape=(2*self.depth,))
         self.observation_space = spaces.Box(0, 5, self.state.obs.shape)
 
-    def reset(self):
-        self.state = State(width=self.width, depth=self.depth)
+    def reset(self, history=None):
+        """history is a list of states that represent a previous episode
+        (the pos/vel will need to be overwritten)"""
         self.stepn = 0
+        if history is not None:
+            self.epload = deepcopy(history)
+            self.state = self.epload[self.stepn]
+        else:
+            self.epload = None
+            self.state = State(width=self.width, depth=self.depth)
+
         return self.state.obs
 
     def step(self, action):
+        # try to project action to safe space (if Error raised, means there is blockage)
         try:
             action, residual = postprocess_action(self.state, action)
         except NoPathError:
+            if self.save_history:
+                self.history.append((deepcopy(self.state), None))
             return self.state.obs, 0, True, {}
-        # travel 1 distance (layer) along planned trajectory
+        # save history
         if self.save_history:
             self.history.append((deepcopy(self.state), deepcopy(action)))
+        # get reward for action
         bcost, parts = behav_cost(self.state, action, self.weights, return_parts=True)
-        reward = (25-bcost)/10 - residual # normalization of cost based on apriori knowledge
+        reward = (25 - bcost) / 10 - residual # normalization of cost based on apriori knowledge
         path, vel = action
+        # update the state
+        self.stepn += 1
+        if self.epload is not None:
+            self.state = self.epload[self.stepn]
+        else:
+            # travel `step_layers` distance (num layers) along planned trajectory
+            self.state.step(1)
         self.state.pos = path[0]
         self.state.vel = vel[0]
-        self.state.step(1)
-        self.stepn += 1
         done = self.stepn >= self.max_steps if self.max_steps else False
         return self.state.obs, reward, done, parts
 
