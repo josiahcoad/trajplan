@@ -8,19 +8,20 @@ import numpy as np
 from state import State
 
 # generate expert trajectory
+env_depth, env_width, nlayers = 3, 3, 2
 def expert(obs):
     try:
-        state = State(Env.depth, Env.width).load_obs(obs)
+        state = State(env_depth, env_width).load_obs(obs)
         return get_behav(state, weights={'fr': 0.3})
     except NoPathError:
-        return np.zeros(Env.depth*2)
+        return np.zeros(env_depth*2)
 
-# generate_expert_traj(expert, 'expert', Env(), n_episodes=100)
+# generate_expert_traj(expert, 'expert', Env(env_depth, env_width, nlayers), n_episodes=100)
 
 
 # pretrain model
 dataset = ExpertDataset(expert_path='expert.npz')
-model = SAC('MlpPolicy', Env(), verbose=1)
+model = SAC('MlpPolicy', Env(env_depth, env_width, nlayers), verbose=1)
 model.pretrain(dataset, n_epochs=5000)
 model.save('pretrained_sac')
 

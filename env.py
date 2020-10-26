@@ -69,12 +69,12 @@ def plot(state, action):
 
 
 class Env(gym.Env):
-    depth = 4
-    width = 4
-    step_layers = 4
-
-    def __init__(self, save_history=False, weights=None, max_steps=None):
+    def __init__(self, depth, width, step_layers,
+                 save_history=False, weights=None, max_steps=None):
         super().__init__()
+        self.depth = depth
+        self.width = width
+        self.step_layers = step_layers
         self.save_history = save_history
         self.weights = weights  # used for cost function calculation
         self.max_steps = max_steps  # stop early if reached this
@@ -130,4 +130,4 @@ class Env(gym.Env):
 
 if __name__ == '__main__':
     from stable_baselines.common.env_checker import check_env
-    check_env(Env())
+    check_env(Env(3,3,3))

@@ -114,7 +114,7 @@ def train(agent=None):
                              log_path='logs', eval_freq=1_000,
                              deterministic=True, render=False)
 
-    vecenv = make_vec_env(lambda: Env(weights=weights), 32, monitor_dir='logs/training')
+    vecenv = make_vec_env(lambda: Env(3, 3, 2, weights=weights), 32, monitor_dir='logs/training')
     if agent:
         agent.set_env(vecenv)
     else:
@@ -130,8 +130,8 @@ def test(agent=None, random=False, render_step=False, eps_plot=True):
     weights = {'fr': 0.3, 'fl': 2, 'fk': 2}
     # history = np.load('history.npy', allow_pickle=True)
     method = 'random' if random else ('rl' if agent else 'rule')
-    env = Env(save_history=eps_plot, max_steps=100, weights=weights)
-    env.depth, env.width, env.step_layers = 3, 3, 2
+    env = Env(depth=3, width=3, step_layers=2,
+              save_history=eps_plot, max_steps=100, weights=weights)
     obs = env.reset()
     done = False
     cost_parts = []
