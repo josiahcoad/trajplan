@@ -69,9 +69,9 @@ def plot(state, action):
 
 
 class Env(gym.Env):
-    depth = 3
-    width = 3
-    step_layers = 3
+    depth = 4
+    width = 4
+    step_layers = 4
 
     def __init__(self, save_history=False, weights=None, max_steps=None):
         super().__init__()

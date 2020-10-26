@@ -126,17 +126,16 @@ def train(agent=None):
 
 def test(agent=None, random=False, render_step=False, eps_plot=True):
     weights = {'fr': 0.3}
-    history = np.load('history.npy', allow_pickle=True)
+    # history = np.load('history.npy', allow_pickle=True)
     method = 'random' if random else ('rl' if agent else 'rule')
     env = Env(save_history=eps_plot, max_steps=100, weights=weights)
-    obs = env.reset(history)
+    obs = env.reset()
     done = False
     cost_parts = []
     tr = 0
     i = 0
     while not done:
         if method == 'rule':
-            # [fr, fa, fj, fd, fk, fl, fc]
             try:
                 action = get_behav(env.state, weights)
             except NoPathError:
@@ -162,7 +161,7 @@ def test(agent=None, random=False, render_step=False, eps_plot=True):
 
 if __name__ == '__main__':
     agent = PPO2.load('best_model')
-    # train()  
+    # train() 
     np.random.seed(int(time.time()))
     start = time.time()
     scores = []
