@@ -69,12 +69,12 @@ def plot(state, action):
 
 
 class Env(gym.Env):
-    def __init__(self, depth, width, step_layers,
+    def __init__(self, depth, width, move_dist,
                  save_history=False, weights=None, max_steps=None):
         super().__init__()
         self.depth = depth
         self.width = width
-        self.step_layers = step_layers
+        self.move_dist = move_dist
         self.save_history = save_history
         self.weights = weights  # used for cost function calculation
         self.max_steps = max_steps  # stop early if reached this
@@ -116,10 +116,10 @@ class Env(gym.Env):
         if self.epload is not None:
             self.state = self.epload[self.stepn]
         else:
-            # travel `step_layers` distance (num layers) along planned trajectory
-            self.state.step(self.step_layers)
-        self.state.pos = path[self.step_layers-1]
-        self.state.vel = vel[self.step_layers-1]
+            # travel `move_dist` distance (num layers) along planned trajectory
+            self.state.step(self.move_dist)
+        self.state.pos = path[self.move_dist-1]
+        self.state.vel = vel[self.move_dist-1]
         done = self.stepn >= self.max_steps if self.max_steps else False
         return self.state.obs, reward, done, parts
 

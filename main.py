@@ -20,11 +20,11 @@ arr = np.array
 def plot_eps(env):
     states = [h[0] for h in env.history]
     actions = [h[1] for h in env.history[:-1]] # the last action is None because we detected end of road
-    nlayers = env.step_layers
+    mdist = env.move_dist
     statics = [s.static_obs for s in states]
     speeds = [s.speed_lim for s in states]
-    epspeed = np.vstack([speeds[0], *[speed[-nlayers:] for speed in speeds[1:]]])
-    epstatic = np.vstack([statics[0], *[static[-nlayers:] for static in statics[1:]]])
+    epspeed = np.vstack([speeds[0], *[speed[-mdist:] for speed in speeds[1:]]])
+    epstatic = np.vstack([statics[0], *[static[-mdist:] for static in statics[1:]]])
     _, (ax1, ax2, ax3) = plt.subplots(3, 1)
     ax2twin = ax2.twinx()  # instantiate a second axes that shares the same x-axis
     for i in range(epspeed.shape[0]):
@@ -36,7 +36,7 @@ def plot_eps(env):
                 ax1.add_patch(Rectangle(((i+.5), (j-.5)), 1, 1))
 
     xseed = np.arange(states[0].depth + 1)
-    xs = [xseed + i * nlayers for i in range(len(actions))]
+    xs = [xseed + i * mdist for i in range(len(actions))]
     p_bc = 0 # path (starting) boundary condition (first derivative)
     v_bc = 0 # velocity ^^
     path_len = 0
@@ -44,10 +44,10 @@ def plot_eps(env):
         # plot path
         path = [state.pos] + list(path)
         vel = [state.vel] + list(vel)
-        ax1.scatter(x[:nlayers], path[:nlayers], color='purple')
+        ax1.scatter(x[:mdist], path[:mdist], color='purple')
         spline = get_spline(x, path, p_bc, True)
-        p_bc = spline([x[nlayers]], 1)[0] # eval the first deriv at the 'nlayers' point
-        xs = np.linspace(x[0], x[nlayers], num=20)
+        p_bc = spline([x[mdist]], 1)[0] # eval the first deriv at the 'mdist' point
+        xs = np.linspace(x[0], x[mdist], num=20)
         ys = spline(xs)
         ax1.plot(xs, ys, color='green')
 
@@ -64,14 +64,14 @@ def plot_eps(env):
         # TODO: curve = np.diff(steers)
 
         # plot velocity profile
-        ax3.scatter(x[:nlayers], vel[:nlayers], color='purple')
-        # idx = list(zip(range(i, nlayers+i),
-        #                arr(path[:nlayers]).round().astype(int)))
-        # ax3.scatter(x[:nlayers]+1, epspeed[idx],
+        ax3.scatter(x[:mdist], vel[:mdist], color='purple')
+        # idx = list(zip(range(i, mdist+i),
+        #                arr(path[:mdist]).round().astype(int)))
+        # ax3.scatter(x[:mdist]+1, epspeed[idx],
         #             color='orange', label='refvel' if i == 0 else None)
         vspline = get_spline(x, vel, v_bc, True)
-        v_bc = vspline([x[nlayers]], 1)[0]
-        xs = np.linspace(x[0], x[nlayers], num=20)
+        v_bc = vspline([x[mdist]], 1)[0]
+        xs = np.linspace(x[0], x[mdist], num=20)
         ax3.plot(xs, vspline(xs), color='blue',
                 label='vel' if i == 0 else None)
         ax3.plot(xs, vspline(xs, 1), color='green',
@@ -80,7 +80,7 @@ def plot_eps(env):
                 label='jrk' if i == 0 else None)
     
     # plot last point
-    ax1.scatter(x[nlayers], path[nlayers], color='purple')
+    ax1.scatter(x[mdist], path[mdist], color='purple')
     
     # set plotting options 
     color = 'tab:blue'
@@ -107,13 +107,13 @@ def save_episode(env):
 
 def train(agent=None):
     weights = {'fr': 0.3, 'fl': 2, 'fk': 2}
-    depth, width, nlayers = 3, 3, 2
-    eval_callback = EvalCallback(Env(depth, width, nlayers, weights=weights),
+    depth, width, mdist = 3, 3, 2
+    eval_callback = EvalCallback(Env(depth, width, mdist, weights=weights),
                              best_model_save_path='logs/models',
                              log_path='logs', eval_freq=1_000,
                              deterministic=True, render=False)
 
-    vecenv = make_vec_env(lambda: Env(depth, width, nlayers, weights=weights), 32, monitor_dir='logs/training')
+    vecenv = make_vec_env(lambda: Env(depth, width, mdist, weights=weights), 32, monitor_dir='logs/training')
     if agent:
         agent.set_env(vecenv)
     else:
@@ -125,13 +125,13 @@ def train(agent=None):
     agent.save('PPO')
 
 
-def test(agent=None, random=False, render_step=False, eps_plot=True):
+def test(agent=None, random=False, render_step=False, eps_plot=True, eps_file=None):
     weights = {'fr': 0.3, 'fl': 2, 'fk': 2}
-    # history = np.load('history.npy', allow_pickle=True)
     method = 'random' if random else ('rl' if agent else 'rule')
-    env = Env(depth=3, width=3, step_layers=2,
+    env = Env(depth=3, width=3, move_dist=3,
               save_history=eps_plot, max_steps=100, weights=weights)
-    obs = env.reset()
+    eps_load = None if eps_file is None else np.load(eps_file, allow_pickle=True)
+    obs = env.reset(eps_load)
     done = False
     cost_parts = []
     tr = 0
@@ -161,20 +161,25 @@ def test(agent=None, random=False, render_step=False, eps_plot=True):
     return tr, i
 
 
-if __name__ == '__main__':
-    # agent = PPO2.load('logs/models/best_model')
-    # train()
-    np.random.seed(int(time.time()))
+
+def demo(agent, n, eps_file=None):
+    viz = n == 1
     start = time.time()
     scores = []
-    for _ in range(1):
-        score, eplen = test(agent=None, eps_plot=True)
-        print('eplen:', eplen)
-        print('score:', int(round(score)))
+    for _ in range(n):
+        score, eplen = test(agent, eps_plot=viz, eps_file=eps_file)
+        if viz:
+          print('eplen:', eplen)
+          print('score:', int(round(score)))
         scores.append(score / eplen)
     print('----------')
-    print(time.time() - start)
+    print('Time:', round(time.time() - start, 2))
     scores = arr(scores)[arr(scores) != 0]
-    print(np.mean(scores))
-    # plt.plot(scores)
-    # plt.show()
+    print('Mean score:', np.mean(scores).round(2))
+    if not viz:
+        plt.plot(scores)
+        plt.show()
+
+if __name__ == '__main__':
+    _agent = PPO2.load('logs/models/best_model')
+    demo(_agent, 1) # 'history.npy'
