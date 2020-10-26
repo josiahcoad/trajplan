@@ -20,13 +20,14 @@ concat = np.concatenate
 # np.random.seed(SEED)
 
 
-def plot_eps(history):
-    states = [h[0] for h in history]
-    actions = [h[1] for h in history[:-1]] # the last action is None because we detected end of road
+def plot_eps(env):
+    states = [h[0] for h in env.history]
+    actions = [h[1] for h in env.history[:-1]] # the last action is None because we detected end of road
+    nlayers = env.step_layers
     statics = [s.static_obs for s in states]
     speeds = [s.speed_lim for s in states]
-    epspeed = np.vstack((speeds[0], [speed[-1] for speed in speeds[1:]]))
-    epstatic = np.vstack([statics[0], [static[-1] for static in statics[1:]]])
+    epspeed = np.vstack([speeds[0], *[speed[-nlayers:] for speed in speeds[1:]]])
+    epstatic = np.vstack([statics[0], *[static[-nlayers:] for static in statics[1:]]])
     _, (ax1, ax2, ax3) = plt.subplots(3, 1)
     ax2twin = ax2.twinx()  # instantiate a second axes that shares the same x-axis
     for i in range(epspeed.shape[0]):
@@ -37,7 +38,8 @@ def plot_eps(history):
             if epstatic[i, j]:
                 ax1.add_patch(Rectangle(((i+.5), (j-.5)), 1, 1))
 
-    xs = [np.arange(states[0].depth + 1) + i for i in range(len(actions))]
+    xseed = np.arange(states[0].depth + 1)
+    xs = [xseed + i * nlayers for i in range(len(actions))]
     p_bc = 0 # path (starting) boundary condition (first derivative)
     v_bc = 0 # velocity ^^
     path_len = 0
@@ -45,10 +47,10 @@ def plot_eps(history):
         # plot path
         path = [state.pos] + list(path)
         vel = [state.vel] + list(vel)
-        ax1.scatter(x[0], path[0], color='purple')
+        ax1.scatter(x[:nlayers], path[:nlayers], color='purple')
         spline = get_spline(x, path, p_bc, True)
-        p_bc = spline([x[1]], 1)[0]
-        xs = np.linspace(x[0], x[1], num=20)
+        p_bc = spline([x[nlayers]], 1)[0] # eval the first deriv at the 'nlayers' point
+        xs = np.linspace(x[0], x[nlayers], num=20)
         ys = spline(xs)
         ax1.plot(xs, ys, color='green')
 
@@ -59,27 +61,27 @@ def plot_eps(history):
         deltas = [0] + np.sqrt(dx**2 + dy**2)
         dists = np.cumsum(deltas) + path_len
         ax2.plot(dists, head, color='blue')
-        steers = np.diff(head) / 10
+        steers = np.diff(head) / 30
         ax2twin.plot(dists[1:], steers, color='green')
         path_len = dists[-1]
         # TODO: curve = np.diff(steers)
 
         # plot velocity profile
-        ax3.scatter(x[0], vel[0], color='purple')
-        ax3.scatter(x[0]+1, epspeed[i][int(round(path[1]))], color='orange',
-                    label='refvel' if i == 0 else None)
+        ax3.scatter(x[:nlayers], vel[:nlayers], color='purple')
+        ax3.scatter(x[:nlayers]+1, epspeed[i:nlayers+i][int(round(path[1]))],
+                color='orange', label='refvel' if i == 0 else None)
         vspline = get_spline(x, vel, v_bc, True)
-        v_bc = vspline(x[1:2], 1)[0]
-        xs = np.linspace(x[0], x[1], num=20)
+        v_bc = vspline([x[nlayers]], 1)[0]
+        xs = np.linspace(x[0], x[nlayers], num=20)
         ax3.plot(xs, vspline(xs), color='blue',
                 label='vel' if i == 0 else None)
         ax3.plot(xs, vspline(xs, 1), color='green',
-                 label='acc' if i == 0 else None)
+                label='acc' if i == 0 else None)
         ax3.plot(xs, vspline(xs, 2), color='red',
-                 label='jrk' if i == 0 else None)
+                label='jrk' if i == 0 else None)
     
     # plot last point
-    ax1.scatter(x[1], path[1], color='purple')
+    ax1.scatter(x[nlayers], path[nlayers], color='purple')
     
     # set plotting options 
     color = 'tab:blue'
@@ -149,11 +151,11 @@ def test(agent=None, random=False, render_step=False, eps_plot=True):
         cost_parts.append(parts)
         tr += rew
         i += 1
-    if env.history:
+    if eps_plot:
         agg_map = {'fr': 'mean', 'fa': 'max', 'fj': 'max', 'fd': 'mean',
                 'fk': 'max', 'fl': 'sum', 'fc': 'max'}
         print(pd.DataFrame(cost_parts).agg(agg_map).round(1))
-        plot_eps(env.history)
+        plot_eps(env)
         save_episode(env)
     return tr, i
 

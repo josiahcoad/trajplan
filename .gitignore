@@ -4,3 +4,4 @@ state
 logs
 *.npz
 todo
+*.npy

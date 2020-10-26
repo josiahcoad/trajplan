@@ -71,6 +71,7 @@ def plot(state, action):
 class Env(gym.Env):
     depth = 3
     width = 3
+    step_layers = 3
 
     def __init__(self, save_history=False, weights=None, max_steps=None):
         super().__init__()
@@ -116,9 +117,9 @@ class Env(gym.Env):
             self.state = self.epload[self.stepn]
         else:
             # travel `step_layers` distance (num layers) along planned trajectory
-            self.state.step(1)
-        self.state.pos = path[0]
-        self.state.vel = vel[0]
+            self.state.step(self.step_layers)
+        self.state.pos = path[self.step_layers-1]
+        self.state.vel = vel[self.step_layers-1]
         done = self.stepn >= self.max_steps if self.max_steps else False
         return self.state.obs, reward, done, parts
 
