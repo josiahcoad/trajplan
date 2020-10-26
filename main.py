@@ -68,8 +68,10 @@ def plot_eps(env):
 
         # plot velocity profile
         ax3.scatter(x[:nlayers], vel[:nlayers], color='purple')
-        ax3.scatter(x[:nlayers]+1, epspeed[i:nlayers+i][int(round(path[1]))],
-                color='orange', label='refvel' if i == 0 else None)
+        # idx = list(zip(range(i, nlayers+i),
+        #                arr(path[:nlayers]).round().astype(int)))
+        # ax3.scatter(x[:nlayers]+1, epspeed[idx],
+        #             color='orange', label='refvel' if i == 0 else None)
         vspline = get_spline(x, vel, v_bc, True)
         v_bc = vspline([x[nlayers]], 1)[0]
         xs = np.linspace(x[0], x[nlayers], num=20)
@@ -129,6 +131,7 @@ def test(agent=None, random=False, render_step=False, eps_plot=True):
     # history = np.load('history.npy', allow_pickle=True)
     method = 'random' if random else ('rl' if agent else 'rule')
     env = Env(save_history=eps_plot, max_steps=100, weights=weights)
+    env.depth, env.width, env.step_layers = 3, 3, 2
     obs = env.reset()
     done = False
     cost_parts = []
@@ -160,8 +163,8 @@ def test(agent=None, random=False, render_step=False, eps_plot=True):
 
 
 if __name__ == '__main__':
-    # agent = PPO2.load('pretrained_ppo')
-    train()
+    agent = PPO2.load('logs/models/best_model')
+    # train()
     np.random.seed(int(time.time()))
     start = time.time()
     scores = []
