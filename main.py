@@ -107,7 +107,7 @@ def save_episode(env):
 
 
 def train(agent=None):
-    weights = {'fr': 0.3}
+    weights = {'fr': 0.3, 'fl': 2, 'fk': 2}
     eval_callback = EvalCallback(Env(weights=weights), best_model_save_path='logs/models',
                              log_path='logs', eval_freq=1_000,
                              deterministic=True, render=False)
@@ -116,16 +116,16 @@ def train(agent=None):
     if agent:
         agent.set_env(vecenv)
     else:
-        hparams = dict(n_steps=64, nminibatches=32, gamma=0.95,
+        hparams = dict(n_steps=64, nminibatches=64, gamma=0.90,
                        learning_rate=2e-5, ent_coef=0.01,
-                       cliprange=0.2, noptepochs=25, lam=0.99)
+                       cliprange=0.4, noptepochs=25, lam=0.99)
         agent = PPO2('MlpPolicy', vecenv, verbose=True, **hparams)
-    agent.learn(200_000, callback=eval_callback)
+    agent.learn(5_000_000, callback=eval_callback)
     agent.save('PPO')
 
 
 def test(agent=None, random=False, render_step=False, eps_plot=True):
-    weights = {'fr': 0.3}
+    weights = {'fr': 0.3, 'fl': 2, 'fk': 2}
     # history = np.load('history.npy', allow_pickle=True)
     method = 'random' if random else ('rl' if agent else 'rule')
     env = Env(save_history=eps_plot, max_steps=100, weights=weights)
@@ -160,8 +160,8 @@ def test(agent=None, random=False, render_step=False, eps_plot=True):
 
 
 if __name__ == '__main__':
-    agent = PPO2.load('best_model')
-    # train() 
+    # agent = PPO2.load('pretrained_ppo')
+    train()
     np.random.seed(int(time.time()))
     start = time.time()
     scores = []
