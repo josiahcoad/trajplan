@@ -7,6 +7,7 @@ from constants import TAU
 arr = np.array
 
 class NumpyEncoder(json.JSONEncoder):
+    #pylint: disable=method-hidden
     def default(self, obj):
         if isinstance(obj, np.integer):
             return int(obj)
