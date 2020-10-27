@@ -70,7 +70,8 @@ def plot(state, action):
 
 class Env(gym.Env):
     def __init__(self, depth, width, move_dist, plan_dist,
-                 save_history=False, weights=None, max_steps=None):
+                 save_history=False, weights=None, max_steps=None,
+                 obstacle_pct=0.2):
         super().__init__()
         assert depth >= plan_dist and plan_dist >= move_dist
         self.depth = depth
@@ -78,6 +79,7 @@ class Env(gym.Env):
         self.move_dist = move_dist
         self.plan_dist = plan_dist
         self.save_history = save_history
+        self.obstacle_pct = obstacle_pct
         self.weights = weights  # used for cost function calculation
         self.max_steps = max_steps  # stop early if reached this
         self.history = []
@@ -94,7 +96,7 @@ class Env(gym.Env):
             self.state = self.epload[self.stepn]
         else:
             self.epload = None
-            self.state = State(width=self.width, depth=self.depth)
+            self.state = State(width=self.width, depth=self.depth, obstacle_pct=self.obstacle_pct)
 
         return self.state.obs
 
@@ -112,7 +114,8 @@ class Env(gym.Env):
             self.history.append((planning_space, deepcopy(action)))
         # get reward for action
         bcost, parts = behav_cost(planning_space, action, self.weights, return_parts=True)
-        reward = (25 - (bcost + residual)) / 10 # normalization of cost based on apriori knowledge
+        parts['residual'] = round(residual, 2)
+        reward = (25 - (bcost + self.weights.get('residual', 1) * residual)) / 10 # normalization of cost based on apriori knowledge
         path, vel = action
         # update the state
         self.stepn += 1

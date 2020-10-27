@@ -130,7 +130,8 @@ def test(agent=None, random=False, render_step=False, eps_plot=True, eps_file=No
     method = 'random' if random else ('rl' if agent else 'rule')
     plan_dist = 3
     env = Env(depth=5, width=3, move_dist=3, plan_dist=plan_dist,
-              save_history=eps_plot, max_steps=100, weights=weights)
+              save_history=eps_plot, max_steps=100, weights=weights,
+              obstacle_pct=0)
     eps_load = None if eps_file is None else np.load(eps_file, allow_pickle=True)
     obs = env.reset(eps_load)
     done = False

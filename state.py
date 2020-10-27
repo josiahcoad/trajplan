@@ -22,9 +22,10 @@ class NumpyEncoder(json.JSONEncoder):
 
 class State:
     def __init__(self, width, depth, pos=None, vel=None, road=None, static_obs=None, dyna_obs=None, speed_lim=None,
-                    same_speed_across=True):
+                    same_speed_across=True, obstacle_pct=0.2):
         self.width = width
         self.depth = depth
+        self.obstacle_pct = obstacle_pct
         self.same_speed_across = same_speed_across
         self.pos = pos if pos is not None \
             else np.random.randint(width, dtype=np.int8)
@@ -41,7 +42,7 @@ class State:
             shape=(300, depth, width))  # self._gen_dyna()
 
     def _gen_static(self, dist):
-        return np.random.binomial(1, 0.2, size=(dist, self.width))
+        return np.random.binomial(1, self.obstacle_pct, size=(dist, self.width))
 
     def _gen_speed(self, dist):
         if self.same_speed_across:
@@ -140,3 +141,6 @@ class State:
 
     def __str__(self):
         return str('\n'.join(['\n'.join([k, str(v.round(1) if k != 'dyna_obs' else v[:10])]) for k, v in self.as_dict().items()]))
+
+    def __repr__(self):
+        return self.__str__()
