@@ -128,7 +128,8 @@ def train(agent=None):
 def test(agent=None, random=False, render_step=False, eps_plot=True, eps_file=None):
     weights = {'fr': 0.3, 'fl': 2, 'fk': 2}
     method = 'random' if random else ('rl' if agent else 'rule')
-    env = Env(depth=3, width=3, move_dist=3,
+    plan_dist = 3
+    env = Env(depth=5, width=3, move_dist=3, plan_dist=plan_dist,
               save_history=eps_plot, max_steps=100, weights=weights)
     eps_load = None if eps_file is None else np.load(eps_file, allow_pickle=True)
     obs = env.reset(eps_load)
@@ -139,7 +140,7 @@ def test(agent=None, random=False, render_step=False, eps_plot=True, eps_file=No
     while not done:
         if method == 'rule':
             try:
-                action = get_behav(env.state, weights)
+                action = get_behav(env.state.truncated(plan_dist), weights)
             except NoPathError:
                 action = np.ones(6) # should trigger a NoPathError in env.step
         elif method == 'random':
@@ -181,5 +182,5 @@ def demo(agent, n, eps_file=None):
         plt.show()
 
 if __name__ == '__main__':
-    _agent = PPO2.load('logs/models/best_model')
+    _agent = None #PPO2.load('logs/models/best_model')
     demo(_agent, 1) # 'history.npy'

@@ -69,18 +69,20 @@ def plot(state, action):
 
 
 class Env(gym.Env):
-    def __init__(self, depth, width, move_dist,
+    def __init__(self, depth, width, move_dist, plan_dist,
                  save_history=False, weights=None, max_steps=None):
         super().__init__()
+        assert depth >= plan_dist and plan_dist >= move_dist
         self.depth = depth
         self.width = width
         self.move_dist = move_dist
+        self.plan_dist = plan_dist
         self.save_history = save_history
         self.weights = weights  # used for cost function calculation
         self.max_steps = max_steps  # stop early if reached this
         self.history = []
         self.reset()
-        self.action_space = spaces.Box(-1, 1, shape=(2*self.depth,))
+        self.action_space = spaces.Box(-1, 1, shape=(2*self.plan_dist,))
         self.observation_space = spaces.Box(0, 5, self.state.obs.shape)
 
     def reset(self, history=None):
@@ -97,19 +99,20 @@ class Env(gym.Env):
         return self.state.obs
 
     def step(self, action):
+        planning_space = self.state.truncated(self.plan_dist)
         # try to project action to safe space (if Error raised, means there is blockage)
         try:
-            action, residual = postprocess_action(self.state, action)
+            action, residual = postprocess_action(planning_space, action)
         except NoPathError:
             if self.save_history:
-                self.history.append((deepcopy(self.state), None))
+                self.history.append((planning_space, None))
             return self.state.obs, 0, True, {}
         # save history
         if self.save_history:
-            self.history.append((deepcopy(self.state), deepcopy(action)))
+            self.history.append((planning_space, deepcopy(action)))
         # get reward for action
-        bcost, parts = behav_cost(self.state, action, self.weights, return_parts=True)
-        reward = (25 - bcost) / 10 - residual # normalization of cost based on apriori knowledge
+        bcost, parts = behav_cost(planning_space, action, self.weights, return_parts=True)
+        reward = (25 - (bcost + residual)) / 10 # normalization of cost based on apriori knowledge
         path, vel = action
         # update the state
         self.stepn += 1
@@ -130,4 +133,4 @@ class Env(gym.Env):
 
 if __name__ == '__main__':
     from stable_baselines.common.env_checker import check_env
-    check_env(Env(3,3,3))
+    check_env(Env(3,3,3,3,3))

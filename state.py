@@ -3,6 +3,7 @@ import time
 import numpy as np
 import json
 from constants import TAU
+from copy import deepcopy
 
 arr = np.array
 
@@ -98,6 +99,14 @@ class State:
         return np.concatenate([[self.pos, self.vel],
                                self.static_obs.flatten(),
                                self.speed_lim.flatten()])
+
+    def truncated(self, depth):
+        # return a version of self that has shorter depth
+        copy = deepcopy(self)
+        copy.depth = depth
+        copy.static_obs = copy.static_obs[:depth]
+        copy.speed_lim = copy.speed_lim[:depth]
+        return copy
 
     def load_obs(self, obs):
         self.pos = obs[0]
