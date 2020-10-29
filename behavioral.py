@@ -124,20 +124,18 @@ def behav_cost(state, action, weights=None, return_parts=False):
         fj: jerk cost
         fc: centripedal acceleration cost
         # ft: time cost (?) (good to keep from setting v=0 unneccessarily)
-    expecting weights in order: ['fr', 'fa', 'fj', 'fd', 'fk', 'fl', 'fc']
+    expecting weights in order: ['fr', 'fa', 'fj', 'fd', 'fk', 'fl', 'fc', 'ft]
     action should be absolute action
     """
-    keys = ['fr', 'fa', 'fj', 'fd', 'fk', 'fl', 'fc']
+    keys = ['fr', 'fa', 'fj', 'fd', 'fk', 'fl', 'fc', 'ft']
     if isinstance(weights, dict):
         weights = [weights.get(k, 1) for k in keys]
     weights = weights if weights is not None else np.ones(shape=7)
     # TODO: should we penalize centripedal acceleration in add. to constraining?
-    # TODO: use prev_state speed limit or curr_state?
     path_, vel_ = action
 
     # TODO: make not hard coded (e.g. assumes lanes are 1 thick)
     if any(path_.round() < 0) or any(path_.round() > state.width - 1):
-        print(path_)
         return 100
 
     vel = arr([state.vel, *vel_])
@@ -164,8 +162,9 @@ def behav_cost(state, action, weights=None, return_parts=False):
     fk = sum(np.abs(curv))
     fl = sum(lchange)
     fc = sum(np.abs(cacc))
+    ft = sum((path_ - path_.round())**2)
 
-    measures = [fr, fa, fj, fd, fk, fl, fc]
+    measures = [fr, fa, fj, fd, fk, fl, fc, ft]
     cost = np.dot(measures, weights)
 
     if return_parts:
