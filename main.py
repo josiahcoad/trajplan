@@ -18,7 +18,7 @@ from utils import plot_eps, save_episode
 arr = np.array
 
 def train(agent=None):
-    weights = {'fr': 0.3, 'fl': 20, 'fk': 20}
+    weights = {'fr': 0.3, 'fl': 20, 'fk': 20, 'ft': 20}
     depth, width, move_dist, plan_dist = 3, 3, 3, 3
     mkenv = lambda: Env(depth, width, move_dist, plan_dist,
                         max_steps=20, weights=weights,
