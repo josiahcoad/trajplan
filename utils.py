@@ -7,7 +7,7 @@ arr = np.array
 
 def plot_eps(env):
     states = [h[0] for h in env.history]
-    actions = [h[1] for h in env.history[:-1]] # the last action is None because we detected end of road
+    actions = [h[1] for h in env.history]
     mdist = env.move_dist
     statics = [s.static_obs for s in states]
     speeds = [s.speed_lim for s in states]

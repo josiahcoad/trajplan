@@ -43,8 +43,8 @@ def train(agent=None):
     return agent
 
 
-def test(agent=None, random=False, render_step=False, eps_plot=True, eps_file=None):
-    method = 'random' if random else ('rl' if agent else 'rule')
+def test(agent=None, render_step=False, eps_plot=True, eps_file=None):
+    method = 'random' if agent == 'random' else ('rl' if agent else 'rule')
     weights = {'fr': 0.3, 'fl': 20, 'fk': 20, 'ft': 10}
     depth, width, move_dist, plan_dist = 3, 3, 3, 3
     env= Env(depth, width, move_dist, plan_dist, save_history=eps_plot,
@@ -69,13 +69,15 @@ def test(agent=None, random=False, render_step=False, eps_plot=True, eps_file=No
         if render_step:
             env.render(action)
         obs, rew, done, parts = env.step(action)
-        cost_parts.append(parts)
+        if not done: # parts is empty when done
+            cost_parts.append(parts)
         tr += rew
         i += 1
     if eps_plot:
         agg_map = {'fr': 'mean', 'fa': 'max', 'fj': 'max', 'fd': 'mean',
                    'fk': 'max', 'fl': 'sum', 'fc': 'max', 'ft': 'mean'}
-        print(pd.DataFrame(cost_parts).agg(agg_map).round(1))
+        if cost_parts:
+            print(pd.DataFrame(cost_parts).agg(agg_map).round(1))
         plot_eps(env)
         save_episode(env)
     return tr, i
