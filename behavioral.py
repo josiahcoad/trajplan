@@ -91,6 +91,7 @@ def get_freespace(state):
 
 
 def get_behav(state, weights=None, absolute=False):
+    # if absolute, returns traj not including current pos
     freespace = get_freespace(state)
     if len(freespace) == 0:
         raise NoPathError(state)
@@ -125,7 +126,8 @@ def behav_cost(state, action, weights=None, return_parts=False):
         fc: centripedal acceleration cost
         # ft: time cost (?) (good to keep from setting v=0 unneccessarily)
     expecting weights in order: ['fr', 'fa', 'fj', 'fd', 'fk', 'fl', 'fc', 'ft]
-    action should be absolute action
+    action should be *absolute* action
+    I will prepend the current posisition before my calculations
     """
     keys = ['fr', 'fa', 'fj', 'fd', 'fk', 'fl', 'fc', 'ft']
     if isinstance(weights, dict):
