@@ -1,8 +1,10 @@
 #pylint: disable=not-an-iterable
-from copy import deepcopy
-import numpy as np
 from itertools import product
-from constants import MAX_CA, TAU, LAYER_DIST
+
+import numpy as np
+
+from constant import LAYER_DIST, MAX_CA, TAU
+
 arr = np.array
 
 
@@ -158,7 +160,8 @@ def behav_cost(state, action, weights=None, return_parts=False):
     # TODO: right way to handle accel negative?
     accel = np.where(np.diff(vel) < 0, -1, 1) * \
         np.diff(vel)**2/(2*dists)
-    jerk = accel - accel[1]  # TODO: must divide by t? (but instantenous...)
+    # TODO: must divide by t? (but instantenous...)
+    jerk = accel - accel[1]
     curv = np.diff(dpath) / LAYER_DIST
     cacc = curv * vel_[:-1]**2
 

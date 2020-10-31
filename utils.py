@@ -1,9 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Rectangle
+
 from motion import get_spline
 
 arr = np.array
+
 
 def plot_eps(env):
     states = [h[0] for h in env.history]
@@ -12,7 +14,8 @@ def plot_eps(env):
     statics = [s.static_obs for s in states]
     speeds = [s.speed_lim for s in states]
     epspeed = np.vstack([speeds[0], *[speed[-mdist:] for speed in speeds[1:]]])
-    epstatic = np.vstack([statics[0], *[static[-mdist:] for static in statics[1:]]])
+    epstatic = np.vstack([statics[0], *[static[-mdist:]
+                                        for static in statics[1:]]])
     _, (ax1, ax2, ax3) = plt.subplots(3, 1)
     ax2twin = ax2.twinx()  # instantiate a second axes that shares the same x-axis
     for i in range(epspeed.shape[0]):
@@ -25,8 +28,8 @@ def plot_eps(env):
 
     xseed = np.arange(states[0].depth + 1)
     xs = [xseed + i * mdist for i in range(len(actions))]
-    p_bc = 0 # path (starting) boundary condition (first derivative)
-    v_bc = 0 # velocity ^^
+    p_bc = 0  # path (starting) boundary condition (first derivative)
+    v_bc = 0  # velocity ^^
     path_len = 0
     for i, (x, state, (path, vel)) in enumerate(zip(xs, states, actions)):
         # plot path
@@ -34,7 +37,8 @@ def plot_eps(env):
         vel = [state.vel] + list(vel)
         ax1.scatter(x[:mdist], path[:mdist], color='purple')
         spline = get_spline(x, path, p_bc, True)
-        p_bc = spline([x[mdist]], 1)[0] # eval the first deriv at the 'mdist' point
+        # eval the first deriv at the 'mdist' point
+        p_bc = spline([x[mdist]], 1)[0]
         xs = np.linspace(x[0], x[mdist], num=20)
         ys = spline(xs)
         ax1.plot(xs, ys, color='green')
@@ -61,23 +65,24 @@ def plot_eps(env):
         v_bc = vspline([x[mdist]], 1)[0]
         xs = np.linspace(x[0], x[mdist], num=20)
         ax3.plot(xs, vspline(xs), color='blue',
-                label='vel' if i == 0 else None)
+                 label='vel' if i == 0 else None)
         ax3.plot(xs, vspline(xs, 1), color='green',
-                label='acc' if i == 0 else None)
+                 label='acc' if i == 0 else None)
         ax3.plot(xs, vspline(xs, 2), color='red',
-                label='jrk' if i == 0 else None)
-    
+                 label='jrk' if i == 0 else None)
+
     # plot last point
+    # pylint: disable=undefined-loop-variable
     ax1.scatter(x[mdist], path[mdist], color='purple')
-    
-    # set plotting options 
+
+    # set plotting options
     color = 'tab:blue'
     ax2.set_xlabel('path dist (s)')
     ax2.set_ylabel('heading (deg)', color=color)
     ax2.tick_params(axis='y', labelcolor=color)
     ax2.set_ylim(-75, 75)
     color = 'tab:green'
-    ax2twin.set_ylabel('turn', color=color) 
+    ax2twin.set_ylabel('turn', color=color)
     ax2twin.tick_params(axis='y', labelcolor=color)
     ax2twin.set_ylim(-1, 1)
 

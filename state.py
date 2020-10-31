@@ -23,7 +23,8 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 class State:
-    def __init__(self, width, depth, pos=None, vel=None, road=None, static_obs=None, dyna_obs=None, speed_lim=None,
+    def __init__(self, width, depth, pos=None, vel=None, road=None,
+                 static_obs=None, dyna_obs=None, speed_lim=None,
                  same_speed_across=True, obstacle_pct=0.2, assure_open_path=False):
         self.width = width
         self.depth = depth

@@ -1,19 +1,17 @@
-from behavioral import get_behav, get_freespace, NoPathError
-from state import State
-from constants import SEED
-from motion import get_spline
+import time
+
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.patches import Rectangle
-from stable_baselines import SAC, PPO2
-from stable_baselines.common.cmd_util import make_vec_env
-import time
-from env import Env
-from stable_baselines.bench.monitor import Monitor
-from stable_baselines.common.callbacks import EvalCallback
 import pandas as pd
-from utils import plot_eps, save_episode
 import tensorflow as tf
+from stable_baselines import PPO2
+from stable_baselines.common.callbacks import EvalCallback
+from stable_baselines.common.cmd_util import make_vec_env
+
+from behavioral import NoPathError, get_behav
+from env import Env
+from utils import plot_eps, save_episode
+
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 arr = np.array
@@ -23,9 +21,9 @@ AGG_MAP = {'fr': 'mean', 'fa': 'max', 'fj': 'max', 'fd': 'mean',
 
 def train(name, agent=None):
     weights = {'fr': 0.3, 'fl': 5, 'fk': 1,
-               'ft': 1, 'success': 10, 'fail': 10, 'step_bonus': 10}
+               'ft': 1, 'success': 10, 'fail': -10, 'step_bonus': 10}
     depth, width, move_dist, plan_dist = 3, 3, 3, 3
-    max_steps, obstacle_pct = 1, 0.0
+    max_steps, obstacle_pct = 1, 0.5
 
     def mkenv(): return Env(depth, width, move_dist, plan_dist,
                             max_steps=max_steps, weights=weights,
@@ -53,9 +51,9 @@ def train(name, agent=None):
 def test(agent=None, render_step=False, eps_plot=True, eps_file=None):
     method = 'random' if agent == 'random' else ('rl' if agent else 'rule')
     weights = {'fr': 0.3, 'fl': 5, 'fk': 1,
-               'ft': 1, 'success': 10, 'fail': 10, 'step_bonus': 10}
+               'ft': 1, 'success': 10, 'fail': -10, 'step_bonus': 10}
     depth, width, move_dist, plan_dist = 3, 3, 3, 3
-    max_steps, obstacle_pct = 1, 0.5
+    max_steps, obstacle_pct = 2, 0.5
 
     env = Env(depth, width, move_dist, plan_dist, save_history=eps_plot,
               max_steps=max_steps, weights=weights, obstacle_pct=obstacle_pct)
@@ -117,5 +115,5 @@ def demo(agent, n, eps_file=None):
 
 
 if __name__ == '__main__':
-    agent = PPO2.load('best_model')
+    ag = PPO2.load('best_model')
     demo(None, 1)  # 'history.npy'

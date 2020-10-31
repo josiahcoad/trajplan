@@ -1,28 +1,27 @@
-from behavioral import get_behav, behav_cost, get_freespace, NoPathError
-from state import State
-from constants import LAYER_DIST
-from motion import get_spline
+from copy import deepcopy
+
+import gym
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.patches import Rectangle
-import gym
 from gym import spaces
-from copy import deepcopy
+from matplotlib.patches import Rectangle
+
+from behavioral import NoPathError, behav_cost, get_behav, get_freespace
+from constant import LAYER_DIST
+from state import State
 
 arr = np.array
 concat = np.concatenate
 
 
 def project(state, proposal):
-    # TOL must be below 0.5, else we'd round to a different cell
-    TOL = .5  # max (abs) distance we allow the projection to be off
     freespace = arr(get_freespace(state))
     if len(freespace) == 0:
         raise NoPathError(state)
 
     idx = np.argmin(((freespace-proposal)**2).sum(1).sum(1))
     freetraj = freespace[idx]
-    if np.max(np.abs(proposal - freetraj)) > TOL:
+    if np.max(np.abs(proposal - freetraj)) > 0.5:  # 0.5 is rounding cutoff
         # our proposal was too far from the freespace.
         residual = ((freetraj-proposal)**2).sum()
         return freetraj, residual
@@ -30,6 +29,7 @@ def project(state, proposal):
 
 
 def action_to_traj(state, action):
+    # pylint: disable=unbalanced-tuple-unpacking
     dp, dv = np.split(action, 2)
     p = np.cumsum(dp) + state.pos
     v = np.cumsum(dv) + state.vel
@@ -52,15 +52,7 @@ def plot(state, action):
             if state.static_obs[i, j]:
                 ax1.add_patch(Rectangle(((i+.5), (j-.5)), 1, 1))
     ax1.scatter(xs, path, label='behav')
-    seed = get_spline(xs, path)
-    ax1.plot(*seed.T, label='seed', color='green')
-
     ax2.scatter(xs, vel)
-    spline = get_spline(xs, vel, True)
-    xs = np.arange(0, xs[-1]+.1, .1)
-    ax2.plot(xs, spline(xs), label='vel')
-    ax2.plot(xs, spline(xs, 1), label='acc')
-    ax2.plot(xs, spline(xs, 2), label='jerk')
     ax2.set_ylim(-3, 4)
     ax2.set_xlim(0, 3.5)
     ax2.legend()
@@ -72,7 +64,7 @@ def unsafe(state, path):
     # path should be absolute path not including the current position
     # return true if planned path is in occupied space
     path = path.round().astype(int)
-    if any(path < 0) or any(path >= state.depth):
+    if any(path < 0) or any(path >= state.width):
         return True
     return any(state.static_obs[i, j] for i, j in enumerate(path))
 
@@ -82,7 +74,7 @@ class Env(gym.Env):
                  save_history=False, weights=None, max_steps=None,
                  obstacle_pct=0.2, penalize_needed_lane_change=False):
         super().__init__()
-        assert depth >= plan_dist and plan_dist >= move_dist
+        assert depth >= plan_dist >= move_dist
         self.depth = depth
         self.width = width
         self.move_dist = move_dist
@@ -93,9 +85,12 @@ class Env(gym.Env):
         self.weights = weights  # used for cost function calculation
         self.max_steps = max_steps  # stop early if reached this
         self.history = []
-        self.reset()
         self.action_space = spaces.Box(-1, 1, shape=(2*self.plan_dist,))
         self.observation_space = spaces.Box(0, 5, self.state.obs.shape)
+        # will be set in reset()
+        self.state = None
+        self.epload = None
+        self.stepn = None
 
     def reset(self, history=None):
         """history is a list of states that represent a previous episode
@@ -125,7 +120,7 @@ class Env(gym.Env):
                 else self.weights.get('fail', -10)
             info['wall'] = wall
         else:
-            # get reward for action
+            # get reward for action TODO: BUG FIX!!!!
             done = False
             bcost, info = behav_cost(
                 self.state, traj, self.weights, return_parts=True)
@@ -150,7 +145,7 @@ class Env(gym.Env):
             # travel `move_dist` distance (num layers) along planned trajectory
             self.state.step(self.move_dist)
             # set a wall in the environment
-            if self.max_steps and self.stepn >= self.max_steps - 1:
+            if self.max_steps and self.stepn >= self.max_steps:
                 self.state.static_obs[self.depth-1, :] = 1
 
         return self.state.obs, reward, done, info
