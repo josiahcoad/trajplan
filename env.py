@@ -118,22 +118,23 @@ class Env(gym.Env):
         if unsafe(self.state, traj[0]):
             done, info = True, {}
             # check if it was avoidable....
-            reward = 0 if len(get_freespace(self.state)) == 0 else -100
+            reward = 0 if len(get_freespace(self.state)) == 0 else -self.weights.get('collision', 100)
         else:
             # get reward for action
             done = False
             bcost, info = behav_cost(self.state, traj, self.weights, return_parts=True)
-            reward = 100 - bcost # normalization of cost based on apriori knowledge
+            reward = self.weights.get('bias', 0) - bcost # normalization of cost based on apriori knowledge
         # update the state
         path, vel = traj
         self.stepn += 1
         if self.epload is not None:
             self.state = self.epload[self.stepn]
-            if self.max_steps and self.stepn >= self.max_steps - 1:
-                self.state.static_obs[self.depth,:] = 1 # set a wall in the environment
         else:
             # travel `move_dist` distance (num layers) along planned trajectory
             self.state.step(self.move_dist)
+            # set a wall in the environment
+            if self.max_steps and self.stepn >= self.max_steps - 1:
+                self.state.static_obs[self.depth,:] = 1
         self.state.pos = path[self.move_dist-1]
         self.state.vel = vel[self.move_dist-1]
         return self.state.obs, reward, done, info
