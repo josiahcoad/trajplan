@@ -123,12 +123,11 @@ class Env(gym.Env):
             bcost, info = behav_cost(
                 self.state, traj, self.weights, return_parts=True)
             if not self.penalize_needed_lane_change:
-                traj = get_behav(self.state,
-                                 self.weights, absolute=True)
-                _, rinfo = behav_cost(
-                    self.state, traj, self.weights, return_parts=True)
+                rtraj = get_behav(self.state,
+                                  self.weights, absolute=True)
+                _, rinfo = behav_cost(self.state,
+                                      rtraj, self.weights, return_parts=True)
                 bcost -= rinfo['fl'] * self.weights.get('fl', 1)
-            # normalization of cost based on apriori knowledge
             reward = self.weights.get('step_bonus', 0) - bcost
         # update the state
         path, vel = traj
