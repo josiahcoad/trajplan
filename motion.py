@@ -11,13 +11,15 @@ get behavior path
     - sample vf' from [0, vmax] (why not have vf' be sampled at offset from vf?)
 """
 
-from scipy.interpolate import CubicSpline
-from behavioral import get_behav
-from state import State
-from constants import LAYER_DIST
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.optimize import least_squares, minimize
+from scipy.interpolate import CubicSpline
+from scipy.optimize import least_squares
+
+from behavioral import get_behav
+from constant import LAYER_DIST
+from state import State
+
 arr = np.array
 
 
@@ -52,19 +54,23 @@ def get_optim(seed):
     return p_opt
 
 
-if __name__ == '__main__':
+def demo():
     state = State(3, 3)
     state.load()
-    path, vel = get_behav(state)
+    path, _ = get_behav(state)
     x = np.cumsum(np.ones(len(path))*LAYER_DIST) - LAYER_DIST
-    seed = get_spline(x, path)
+    seed = get_spline(x, path, 0)
     p_opt = get_optim(seed)
     plt.scatter(x, path, label='waypoints')
     plt.plot(*seed.T, label='seed')
     plt.plot(*p_opt.T, label='p_opt')
-    for i, (x, y) in enumerate(p_opt[1:-1]):
-        plt.text(x, y, round(k[i], 1))
+    # for i, (x, y) in enumerate(p_opt[1:-1]):
+    #     plt.text(x, y, round(k[i], 1))
     plt.xlim(-1, 3)
     plt.ylim(-1, 3)
     plt.legend()
     plt.show()
+
+
+if __name__ == '__main__':
+    demo()
