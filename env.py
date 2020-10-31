@@ -80,7 +80,7 @@ def unsafe(state, path):
 class Env(gym.Env):
     def __init__(self, depth, width, move_dist, plan_dist,
                  save_history=False, weights=None, max_steps=None,
-                 obstacle_pct=0.2):
+                 obstacle_pct=0.2, penalize_needed_lane_change=False):
         super().__init__()
         assert depth >= plan_dist and plan_dist >= move_dist
         self.depth = depth
@@ -89,6 +89,7 @@ class Env(gym.Env):
         self.plan_dist = plan_dist
         self.save_history = save_history
         self.obstacle_pct = obstacle_pct
+        self.penalize_needed_lane_change = penalize_needed_lane_change
         self.weights = weights  # used for cost function calculation
         self.max_steps = max_steps  # stop early if reached this
         self.history = []
@@ -128,6 +129,12 @@ class Env(gym.Env):
             done = False
             bcost, info = behav_cost(
                 self.state, traj, self.weights, return_parts=True)
+            if not self.penalize_needed_lane_change:
+                traj = get_behav(self.state,
+                                 self.weights, absolute=True)
+                _, rinfo = behav_cost(
+                    self.state, traj, self.weights, return_parts=True)
+                bcost -= rinfo['fl'] * self.weights.get('fl', 1)
             # normalization of cost based on apriori knowledge
             reward = self.weights.get('step_bonus', 0) - bcost
         # update the state
