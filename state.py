@@ -1,16 +1,16 @@
-#pylint: disable=not-an-iterable
+# pylint: disable=not-an-iterable
 import json
 from copy import deepcopy
 
 import numpy as np
 
-from behavioral import get_freepaths
+from behavioral import get_freepaths, behav_cost
 
 arr = np.array
 
 
 class NumpyEncoder(json.JSONEncoder):
-    #pylint: disable=method-hidden
+    # pylint: disable=method-hidden
     def default(self, obj):
         if isinstance(obj, np.integer):
             return int(obj)
@@ -32,7 +32,7 @@ class State:
         self.same_speed_across = same_speed_across
         self.pos = pos if pos is not None \
             else np.random.randint(width, dtype=np.int8)
-        self.vel = vel if pos is not None \
+        self.vel = vel if vel is not None \
             else (np.random.randint(1, 4, dtype=np.int8))
         self.road = road if road is not None \
             else self._gen_road(depth)

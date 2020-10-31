@@ -143,7 +143,7 @@ class Env(gym.Env):
             # travel `move_dist` distance (num layers) along planned trajectory
             self.state.step(self.move_dist)
             # set a wall in the environment
-            if self.max_steps and self.stepn >= self.max_steps:
+            if self.max_steps and self.stepn == self.max_steps:
                 self.state.static_obs[self.depth-1, :] = 1
         # save state after done since we will need to have it if we load eps
         if done and self.save_history:
