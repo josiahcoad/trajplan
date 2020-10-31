@@ -1,3 +1,4 @@
+# pylint: disable=attribute-defined-outside-init
 from copy import deepcopy
 
 import gym
@@ -85,12 +86,9 @@ class Env(gym.Env):
         self.weights = weights  # used for cost function calculation
         self.max_steps = max_steps  # stop early if reached this
         self.history = []
+        self.reset()
         self.action_space = spaces.Box(-1, 1, shape=(2*self.plan_dist,))
         self.observation_space = spaces.Box(0, 5, self.state.obs.shape)
-        # will be set in reset()
-        self.state = None
-        self.epload = None
-        self.stepn = None
 
     def reset(self, history=None):
         """history is a list of states that represent a previous episode
@@ -147,7 +145,9 @@ class Env(gym.Env):
             # set a wall in the environment
             if self.max_steps and self.stepn >= self.max_steps:
                 self.state.static_obs[self.depth-1, :] = 1
-
+        # save state after done since we will need to have it if we load eps
+        if done and self.save_history:
+            self.history.append((deepcopy(self.state), deepcopy(traj)))
         return self.state.obs, reward, done, info
 
     def render(self, action):
