@@ -1,9 +1,10 @@
 #pylint: disable=not-an-iterable
-import time
-import numpy as np
 import json
-from constants import TAU
 from copy import deepcopy
+
+import numpy as np
+from constant import TAU
+
 from behavioral import get_freepaths
 
 arr = np.array
@@ -14,12 +15,11 @@ class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.integer):
             return int(obj)
-        elif isinstance(obj, np.floating):
+        if isinstance(obj, np.floating):
             return float(obj)
-        elif isinstance(obj, np.ndarray):
+        if isinstance(obj, np.ndarray):
             return obj.tolist()
-        else:
-            return super(NumpyEncoder, self).default(obj)
+        return super(NumpyEncoder, self).default(obj)
 
 
 class State:
@@ -66,47 +66,14 @@ class State:
     def _gen_road(self, dist):
         return np.zeros(shape=(dist, self.width))
 
-    def _gen_dyna(self):
-        # place a new dynamic obstacle (car) at some random column
-        new_x = np.random.randint(self.width)
-        return self._dyna_predict(new_x)
-
     def step(self, dist):
-        """generate the next environment from random simulation after moving some distance and time"""
+        """generate the next environment from random simulation after moving some distance/time"""
         self.static_obs = np.concatenate(
             [self.static_obs[dist:], self._gen_static(dist)])
         self.speed_lim = np.concatenate(
             [self.speed_lim[dist:], self._gen_speed(dist)])
         self.road = np.concatenate(
             [self.road[dist:], self._gen_road(dist)])
-
-        # pre_x = np.argwhere(self.dyna_obs)  # only works with single cell dynas
-        # new = self._gen_dyna(new_x)
-        # pre = np.any([self._dyna_predict(pre_x) for x in pre_x])
-        # np.dyna_obs = np.any([dyna[time:, dist:, :], new_dyna])
-        # self.dyna_obs = np.concatenate([gen_road, self.static_obs])[:3]
-
-    def _dyna_predict(self, x):
-        # extrapolate obstacle over time (using speed_lim) (later use behavioral model or even RL policy to predict)
-        p = arr([np.arange(3), [x, x, x]]).T  # determine path through grid
-        v = arr([self.speed_lim[i, j] for i, j in p])
-        dyna = self._dyna_expand(p[:, 1], v)
-        return np.vstack([dyna, np.zeros(shape=(10, 3, 3))])
-
-    @staticmethod
-    def _dyna_expand(p, v):
-        p = arr([np.arange(len(p)), p]).T
-        p_c = p * [LAYER_DIST, 1]  # convert to cartesian coords
-        dists = np.linalg.norm(np.diff(p_c, axis=0), axis=1)
-        avg_v = (v[1:] + v[:-1]) / 2
-        dt = dists / avg_v  # time to reach each node
-        # we don't have sensor data to know how fast so assume constant speed from last known
-        dt = arr([*dt, dt[-1]])
-        seed = np.zeros(shape=(len(p), 3, 3))
-        for i, (j, k) in enumerate(p):
-            seed[i, j, k] = 1
-        # rounding error problem?
-        return np.repeat(seed, np.rint(TAU * dt).astype(int), axis=0)
 
     @property
     def obs(self):
@@ -134,9 +101,7 @@ class State:
         return {
             'pos': self.pos,
             'vel': self.vel,
-            # 'road': self.road,
             'static_obs': self.static_obs,
-            # 'dyna_obs': self.dyna_obs,
             'speed_lim': self.speed_lim,
         }
 
@@ -153,7 +118,8 @@ class State:
         self.speed_lim = arr(d['speed_lim'])
 
     def __str__(self):
-        return str('\n'.join(['\n'.join([k, str(v.round(1) if k != 'dyna_obs' else v[:10])]) for k, v in self.as_dict().items()]))
+        return str('\n'.join(['\n'.join([k, str(v.round(1) if k != 'dyna_obs' else v[:10])])
+                              for k, v in self.as_dict().items()]))
 
     def __repr__(self):
         return self.__str__()
