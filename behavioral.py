@@ -3,7 +3,6 @@ from copy import deepcopy
 import numpy as np
 from itertools import product
 from constants import MAX_CA, TAU, LAYER_DIST
-from state import State
 arr = np.array
 
 
@@ -68,6 +67,12 @@ def open_vels(state, path, vels):
 class NoPathError(Exception):
     def __init__(self, state):
         pass
+
+
+def get_freepaths(state):
+    lat_moves = combinations([-1, 0, 1], state.depth)
+    paths = np.cumsum(lat_moves, axis=1) + state.pos.round().astype(int)
+    return open_paths(state, paths)
 
 
 def get_freespace(state):
@@ -143,14 +148,16 @@ def behav_cost(state, action, weights=None, return_parts=False):
     vel = arr([state.vel, *vel_])
     path = arr([state.pos, *path_])
     dpath = np.diff(path)
-    lchange = np.abs(np.diff(path.round())) # TODO: make not hard coded (e.g. assumes lanes are 1 thick)
+    # TODO: make not hard coded (e.g. assumes lanes are 1 thick)
+    lchange = np.abs(np.diff(path.round()))
     dists = np.sqrt(dpath**2 + LAYER_DIST**2)
-    ref_vel = arr([state.speed_lim[i, int(round(p))] for i, p in enumerate(path_)])
+    ref_vel = arr([state.speed_lim[i, int(round(p))]
+                   for i, p in enumerate(path_)])
 
     vel_err = vel_ - ref_vel
     # TODO: right way to handle accel negative?
     accel = np.where(np.diff(vel) < 0, -1, 1) * \
-            np.diff(vel)**2/(2*dists)
+        np.diff(vel)**2/(2*dists)
     jerk = accel - accel[1]  # TODO: must divide by t? (but instantenous...)
     curv = np.diff(dpath) / LAYER_DIST
     cacc = curv * vel_[:-1]**2
@@ -172,13 +179,3 @@ def behav_cost(state, action, weights=None, return_parts=False):
     if return_parts:
         return cost, dict(zip(keys, measures))
     return cost
-
-
-def test():
-    state = State(3, 3)
-    state.load()
-    print(state)
-    print(behav_cost(state, arr([[0,1,2], [3,4,4]]), return_parts=True))
-
-if __name__ == '__main__':
-    test()

@@ -4,8 +4,10 @@ import numpy as np
 import json
 from constants import TAU
 from copy import deepcopy
+from behavioral import get_freepaths
 
 arr = np.array
+
 
 class NumpyEncoder(json.JSONEncoder):
     #pylint: disable=method-hidden
@@ -22,10 +24,11 @@ class NumpyEncoder(json.JSONEncoder):
 
 class State:
     def __init__(self, width, depth, pos=None, vel=None, road=None, static_obs=None, dyna_obs=None, speed_lim=None,
-                    same_speed_across=True, obstacle_pct=0.2):
+                 same_speed_across=True, obstacle_pct=0.2, assure_open_path=False):
         self.width = width
         self.depth = depth
         self.obstacle_pct = obstacle_pct
+        self.assure_open_path = assure_open_path
         self.same_speed_across = same_speed_across
         self.pos = pos if pos is not None \
             else np.random.randint(width, dtype=np.int8)
@@ -42,12 +45,22 @@ class State:
             shape=(300, depth, width))  # self._gen_dyna()
 
     def _gen_static(self, dist):
-        return np.random.binomial(1, self.obstacle_pct, size=(dist, self.width))
+        def mk_static(): return np.random.binomial(
+            1, self.obstacle_pct, size=(dist, self.width))
+
+        if not self.assure_open_path or self.pos >= self.width or self.pos < 0:
+            return mk_static()
+        while True:
+            cp = deepcopy(self)
+            proposal = mk_static()
+            cp.static_obs = proposal
+            if len(get_freepaths(cp)) > 0:
+                return proposal
 
     def _gen_speed(self, dist):
         if self.same_speed_across:
             speeds = np.clip(np.random.normal(3, 2, size=dist), 1, 5)
-            return np.tile(speeds, (self.width,1)).T
+            return np.tile(speeds, (self.width, 1)).T
         return np.clip(np.random.normal(3, 2, size=(dist, self.width)), 1, 5)
 
     def _gen_road(self, dist):

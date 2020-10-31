@@ -67,6 +67,7 @@ def plot(state, action):
 
     plt.show()
 
+
 def unsafe(state, path):
     # path should be absolute path not including the current position
     # return true if planned path is in occupied space
@@ -74,7 +75,7 @@ def unsafe(state, path):
     if any(path < 0) or any(path >= state.depth):
         return True
     return any(state.static_obs[i, j] for i, j in enumerate(path))
-        
+
 
 class Env(gym.Env):
     def __init__(self, depth, width, move_dist, plan_dist,
@@ -104,12 +105,12 @@ class Env(gym.Env):
             self.state = self.epload[self.stepn]
         else:
             self.epload = None
-            self.state = State(width=self.width, depth=self.depth, obstacle_pct=self.obstacle_pct)
+            self.state = State(width=self.width, depth=self.depth,
+                               obstacle_pct=self.obstacle_pct, assure_open_path=True)
 
         return self.state.obs
 
     def step(self, action):
-        # import pdb; pdb.set_trace()
         # convert action to absolute path
         traj = action_to_traj(self.state, action)
         # save history
@@ -118,25 +119,32 @@ class Env(gym.Env):
         if unsafe(self.state, traj[0]):
             done, info = True, {}
             # check if it was avoidable....
-            reward = 0 if len(get_freespace(self.state)) == 0 else -self.weights.get('collision', 100)
+            wall = len(get_freespace(self.state)) == 0
+            reward = 0 if wall else self.weights.get('collision', -100)
+            info['wall'] = wall
         else:
             # get reward for action
             done = False
-            bcost, info = behav_cost(self.state, traj, self.weights, return_parts=True)
-            reward = self.weights.get('bias', 0) - bcost # normalization of cost based on apriori knowledge
+            bcost, info = behav_cost(
+                self.state, traj, self.weights, return_parts=True)
+            # normalization of cost based on apriori knowledge
+            reward = self.weights.get('bias', 0) - bcost
         # update the state
         path, vel = traj
         self.stepn += 1
         if self.epload is not None:
             self.state = self.epload[self.stepn]
+            self.state.pos = path[self.move_dist-1]
+            self.state.vel = vel[self.move_dist-1]
         else:
+            self.state.pos = path[self.move_dist-1]
+            self.state.vel = vel[self.move_dist-1]
             # travel `move_dist` distance (num layers) along planned trajectory
             self.state.step(self.move_dist)
             # set a wall in the environment
             if self.max_steps and self.stepn >= self.max_steps - 1:
-                self.state.static_obs[self.depth,:] = 1
-        self.state.pos = path[self.move_dist-1]
-        self.state.vel = vel[self.move_dist-1]
+                self.state.static_obs[self.depth-1, :] = 1
+
         return self.state.obs, reward, done, info
 
     def render(self, action):
@@ -146,4 +154,4 @@ class Env(gym.Env):
 
 if __name__ == '__main__':
     from stable_baselines.common.env_checker import check_env
-    check_env(Env(3,3,3,3,3))
+    check_env(Env(3, 3, 3, 3, 3))
