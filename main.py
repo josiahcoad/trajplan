@@ -1,20 +1,21 @@
-from utils import plot_eps, save_episode
-import pandas as pd
-from stable_baselines.common.callbacks import EvalCallback
-from stable_baselines.bench.monitor import Monitor
-from env import Env
-import time
-from stable_baselines.common.cmd_util import make_vec_env
-from stable_baselines import SAC, PPO2
-from matplotlib.patches import Rectangle
-import numpy as np
-import matplotlib.pyplot as plt
-from motion import get_spline
-from constants import SEED
-from state import State
 from behavioral import get_behav, get_freespace, NoPathError
+from state import State
+from constants import SEED
+from motion import get_spline
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.patches import Rectangle
+from stable_baselines import SAC, PPO2
+from stable_baselines.common.cmd_util import make_vec_env
+import time
+from env import Env
+from stable_baselines.bench.monitor import Monitor
+from stable_baselines.common.callbacks import EvalCallback
+import pandas as pd
+from utils import plot_eps, save_episode
 import tensorflow as tf
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+
 arr = np.array
 AGG_MAP = {'fr': 'mean', 'fa': 'max', 'fj': 'max', 'fd': 'mean',
            'fk': 'max', 'fl': 'sum', 'fc': 'max', 'ft': 'mean'}
