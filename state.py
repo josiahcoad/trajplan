@@ -22,8 +22,8 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 class State:
-    def __init__(self, width, depth, pos=None, vel=None, road=None,
-                 static_obs=None, dyna_obs=None, speed_lim=None,
+    def __init__(self, width, depth, pos=None, vel=None,
+                 static_obs=None, speed_lim=None,
                  same_speed_across=True, obstacle_pct=0.2, assure_open_path=False):
         self.width = width
         self.depth = depth
@@ -34,15 +34,10 @@ class State:
             else np.random.randint(width, dtype=np.int8)
         self.vel = vel if vel is not None \
             else (np.random.randint(1, 4, dtype=np.int8))
-        self.road = road if road is not None \
-            else self._gen_road(depth)
         self.static_obs = static_obs if static_obs is not None \
             else self._gen_static(depth)
         self.speed_lim = speed_lim if speed_lim is not None \
             else self._gen_speed(depth)
-        # descritized "vertically" by TAU
-        self.dyna_obs = dyna_obs if dyna_obs is not None else np.zeros(
-            shape=(300, depth, width))  # self._gen_dyna()
 
     def _gen_static(self, dist):
         def mk_static(): return np.random.binomial(
@@ -63,17 +58,12 @@ class State:
             return np.tile(speeds, (self.width, 1)).T
         return np.clip(np.random.normal(3, 2, size=(dist, self.width)), 1, 5)
 
-    def _gen_road(self, dist):
-        return np.zeros(shape=(dist, self.width))
-
     def step(self, dist):
         """generate the next environment from random simulation after moving some distance/time"""
         self.static_obs = np.concatenate(
             [self.static_obs[dist:], self._gen_static(dist)])
         self.speed_lim = np.concatenate(
             [self.speed_lim[dist:], self._gen_speed(dist)])
-        self.road = np.concatenate(
-            [self.road[dist:], self._gen_road(dist)])
 
     @property
     def obs(self):

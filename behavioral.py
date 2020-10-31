@@ -144,10 +144,6 @@ def behav_cost(state, action, weights=None, return_parts=False):
 
     vel = arr([state.vel, *vel_])
     path = arr([state.pos, *path_])
-    # -0.5 because we want to travel in the middle of the lane (0.5, 1.5, 2.5, ...)
-    offsets = (path_ - 0.5) - path_.round()
-    # edge case if path is right on lane divide, offset == -1
-    offsets = np.where(offsets == -1, 0, offsets)
 
     dpath = np.diff(path)
     lchange = np.abs(np.diff(path.round()))
@@ -172,7 +168,7 @@ def behav_cost(state, action, weights=None, return_parts=False):
     fk = sum(np.abs(curv))
     fl = sum(lchange)
     fc = sum(np.abs(cacc))
-    ft = sum(offsets**2)
+    ft = sum((path_ - path_.round())**2)
 
     measures = [fr, fa, fj, fd, fk, fl, fc, ft]
     cost = np.dot(measures, weights)

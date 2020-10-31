@@ -118,7 +118,7 @@ class Env(gym.Env):
                 else self.weights.get('fail', -10)
             info['wall'] = wall
         else:
-            # get reward for action TODO: BUG FIX!!!!
+            # get reward for action
             done = False
             bcost, info = behav_cost(
                 self.state, traj, self.weights, return_parts=True)
@@ -146,7 +146,7 @@ class Env(gym.Env):
                 self.state.static_obs[self.depth-1, :] = 1
         # save state after done since we will need to have it if we load eps
         if done and self.save_history:
-            self.history.append((deepcopy(self.state), deepcopy(traj)))
+            self.history.append((deepcopy(self.state), None))
         return self.state.obs, reward, done, info
 
     def render(self, action):
