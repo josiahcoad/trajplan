@@ -137,7 +137,7 @@ def behav_cost(state, action, weights=None, return_parts=False):
     keys = ['fr', 'fa', 'fj', 'fd', 'fk', 'fl', 'fc', 'ft']
     if isinstance(weights, dict):
         weights = [weights.get(k, 1) for k in keys]
-    weights = weights if weights is not None else np.ones(shape=7)
+    weights = weights if weights is not None else np.ones(shape=len(keys))
     # TODO: should we penalize centripedal acceleration in add. to constraining?
     path_, vel_ = action
 
