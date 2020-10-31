@@ -1,6 +1,5 @@
 #pylint: disable=not-an-iterable
 from itertools import product
-
 import numpy as np
 
 from constant import LAYER_DIST, MAX_CA, TAU
@@ -67,8 +66,7 @@ def open_vels(state, path, vels):
 
 
 class NoPathError(Exception):
-    def __init__(self, state):
-        pass
+    pass
 
 
 def get_freepaths(state):
