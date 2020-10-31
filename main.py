@@ -21,21 +21,21 @@ AGG_MAP = {'fr': 'mean', 'fa': 'max', 'fj': 'max', 'fd': 'mean',
 
 
 def train(name, agent=None):
-    weights = {'fr': 0.3, 'fl': 20, 'fk': 20,
-               'ft': 20, 'collision': -100, 'bias': 100}
+    weights = {'fr': 0.3, 'fl': 1, 'fk': 1,
+               'ft': 1, 'collision': -10, 'bias': 10}
     depth, width, move_dist, plan_dist = 3, 3, 3, 3
-    max_steps, obstacle_pct = 1, 0.1
+    max_steps, obstacle_pct = 1, 0.5
 
     def mkenv(): return Env(depth, width, move_dist, plan_dist,
                             max_steps=max_steps, weights=weights,
                             obstacle_pct=obstacle_pct)
 
     eval_callback = EvalCallback(mkenv(),
-                                 best_model_save_path='logs/{name}',
+                                 best_model_save_path=f'logs/{name}',
                                  log_path='logs', eval_freq=1_000,
                                  deterministic=True, render=False)
 
-    vecenv = make_vec_env(mkenv, 32, monitor_dir='logs/{name}/training')
+    vecenv = make_vec_env(mkenv, 32, monitor_dir=f'logs/{name}/training')
     if agent:
         agent.set_env(vecenv)
     else:
@@ -44,17 +44,17 @@ def train(name, agent=None):
                        cliprange=0.4, noptepochs=25, lam=0.99)
         agent = PPO2('MlpPolicy', vecenv, verbose=True, **hparams)
     agent.learn(1_000_000, callback=eval_callback)
-    agent.save('logs/{name}/final')
+    agent.save(f'logs/{name}/final')
     vecenv.close()
     return agent
 
 
 def test(agent=None, render_step=False, eps_plot=True, eps_file=None):
     method = 'random' if agent == 'random' else ('rl' if agent else 'rule')
-    weights = {'fr': 0.3, 'fl': 20, 'fk': 20,
-               'ft': 20, 'collision': -100, 'bias': 100}
+    weights = {'fr': 0.3, 'fl': 1, 'fk': 1,
+               'ft': 1, 'success': 10, 'fail': 10, 'step_bonus': 10}
     depth, width, move_dist, plan_dist = 3, 3, 3, 3
-    max_steps, obstacle_pct = 10, 0.5
+    max_steps, obstacle_pct = 1, 0.5
 
     env = Env(depth, width, move_dist, plan_dist, save_history=eps_plot,
               max_steps=max_steps, weights=weights, obstacle_pct=obstacle_pct)
@@ -79,7 +79,7 @@ def test(agent=None, render_step=False, eps_plot=True, eps_file=None):
         if render_step:
             env.render(action)
         obs, rew, done, info = env.step(action)
-        if info:  # info is empty when done
+        if not done:  # info is empty when done
             infos.append(info)
         tr += rew
         i += 1
@@ -116,4 +116,5 @@ def demo(agent, n, eps_file=None):
 
 
 if __name__ == '__main__':
+    agent = PPO2.load('best_model')
     demo(None, 1)  # 'history.npy'

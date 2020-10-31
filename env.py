@@ -120,7 +120,8 @@ class Env(gym.Env):
             done, info = True, {}
             # check if it was avoidable....
             wall = len(get_freespace(self.state)) == 0
-            reward = 0 if wall else self.weights.get('collision', -100)
+            reward = self.weights.get('success', 10) if wall \
+                else self.weights.get('fail', -10)
             info['wall'] = wall
         else:
             # get reward for action
@@ -128,7 +129,7 @@ class Env(gym.Env):
             bcost, info = behav_cost(
                 self.state, traj, self.weights, return_parts=True)
             # normalization of cost based on apriori knowledge
-            reward = self.weights.get('bias', 0) - bcost
+            reward = self.weights.get('step_bonus', 0) - bcost
         # update the state
         path, vel = traj
         self.stepn += 1
