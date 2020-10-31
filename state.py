@@ -3,7 +3,6 @@ import json
 from copy import deepcopy
 
 import numpy as np
-from constant import TAU
 
 from behavioral import get_freepaths
 
@@ -19,7 +18,7 @@ class NumpyEncoder(json.JSONEncoder):
             return float(obj)
         if isinstance(obj, np.ndarray):
             return obj.tolist()
-        return super(NumpyEncoder, self).default(obj)
+        return super().default(obj)
 
 
 class State:

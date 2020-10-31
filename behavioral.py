@@ -140,24 +140,19 @@ def behav_cost(state, action, weights=None, return_parts=False):
     if isinstance(weights, dict):
         weights = [weights.get(k, 1) for k in keys]
     weights = weights if weights is not None else np.ones(shape=len(keys))
-    # TODO: should we penalize centripedal acceleration in add. to constraining?
     path_, vel_ = action
 
-    # TODO: make not hard coded (e.g. assumes lanes are 1 thick)
-    if any(path_.round() < 0) or any(path_.round() > state.width - 1):
-        return 100
+    assert all(path_.round() >= 0) and all(path_.round() < state.width)
 
     vel = arr([state.vel, *vel_])
     path = arr([state.pos, *path_])
     dpath = np.diff(path)
-    # TODO: make not hard coded (e.g. assumes lanes are 1 thick)
     lchange = np.abs(np.diff(path.round()))
     dists = np.sqrt(dpath**2 + LAYER_DIST**2)
     ref_vel = arr([state.speed_lim[i, int(round(p))]
                    for i, p in enumerate(path_)])
 
     vel_err = vel_ - ref_vel
-    # TODO: right way to handle accel negative?
     accel = np.where(np.diff(vel) < 0, -1, 1) * \
         np.diff(vel)**2/(2*dists)
     # TODO: must divide by t? (but instantenous...)
