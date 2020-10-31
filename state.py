@@ -43,7 +43,7 @@ class State:
         def mk_static(): return np.random.binomial(
             1, self.obstacle_pct, size=(dist, self.width))
 
-        if not self.assure_open_path or self.pos >= self.width or self.pos < 0:
+        if not self.assure_open_path or self.pos.round() >= self.width or self.pos.round() < 0:
             return mk_static()
         while True:
             cp = deepcopy(self)

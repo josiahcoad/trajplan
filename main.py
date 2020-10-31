@@ -17,6 +17,7 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 arr = np.array
 AGG_MAP = {'fr': 'mean', 'fa': 'max', 'fj': 'max', 'fd': 'mean',
            'fk': 'max', 'fl': 'sum', 'fc': 'max', 'ft': 'mean'}
+COLNAMES = {k: k + '_' + v for k, v in AGG_MAP.items()}
 
 
 def train(name, agent=None):
@@ -51,9 +52,9 @@ def train(name, agent=None):
 def test(agent=None, render_step=False, eps_plot=True, eps_file=None):
     method = 'random' if agent == 'random' else ('rl' if agent else 'rule')
     weights = {'fr': 0.3, 'fl': 5, 'fk': 1,
-               'ft': 1, 'success': 10, 'fail': -10, 'step_bonus': 10}
+               'ft': 1, 'success': 20, 'fail': -20, 'step_bonus': 10}
     depth, width, move_dist, plan_dist = 3, 3, 3, 3
-    max_steps, obstacle_pct = 2, 0.5
+    max_steps, obstacle_pct = None, 0.5
 
     env = Env(depth, width, move_dist, plan_dist, save_history=eps_plot,
               max_steps=max_steps, weights=weights, obstacle_pct=obstacle_pct)
@@ -84,8 +85,7 @@ def test(agent=None, render_step=False, eps_plot=True, eps_file=None):
         i += 1
     if eps_plot:
         if infos:
-            print(pd.DataFrame(infos).agg(AGG_MAP).round(1))
-        plot_eps(env)
+            print(pd.DataFrame(infos).agg(AGG_MAP).round(1).rename(COLNAMES))
         save_episode(env)
     # we failed if we are done and there was not a wall
     fail = not info['wall']
@@ -115,5 +115,5 @@ def demo(agent, n, eps_file=None):
 
 
 if __name__ == '__main__':
-    ag = PPO2.load('best_model')
-    demo(None, 1)  # 'history.npy'
+    ag = PPO2.load('final')
+    demo(ag, 1)  # 'history.npy'
