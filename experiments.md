@@ -29,3 +29,7 @@
     - max_steps, obstacle_pct = 1, 0.5
     - R: -5.3, S: .80
     - rule: R: -6.55
+
+
+- penalize_needed_lane_change=True results in less success, higher reward
+- 'fail': -20 works slightly better (higher success) than 'fail': -10
