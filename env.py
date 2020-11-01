@@ -64,9 +64,11 @@ def plot(state, action):
 def unsafe(state, path):
     # path should be absolute path not including the current position
     # return true if planned path is in occupied space
+    # TODO: BUG? I think it should be path < 0.5 or path >= state.width + 0.5
     path = path.round().astype(int)
     if any(path < 0) or any(path >= state.width):
         return True
+    # TODO: Bug? what if j is not an integer??
     return any(state.static_obs[i, j] for i, j in enumerate(path))
 
 
