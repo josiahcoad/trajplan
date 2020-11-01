@@ -160,7 +160,7 @@ def behav_cost(state, action, weights=None, return_parts=False):
     cacc = curv * vel_[:-1]**2
 
     # fr = sum(np.abs(np.where(vel_err < 0, vel_err, vel_err*2)))
-    fr = sum(np.abs(vel_err**2))
+    fr = sum(vel_err**2)
     fa = sum(np.abs(accel))
     fj = sum(np.abs(jerk))
 
