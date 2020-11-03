@@ -154,10 +154,9 @@ def behav_cost(state, action, weights=None, return_parts=False):
     vel_err = vel_ - ref_vel
     accel = np.where(np.diff(vel) < 0, -1, 1) * \
         np.diff(vel)**2/(2*dists)
-    # TODO: must divide by t? (but instantenous...)
-    jerk = accel - accel[1]
+    jerk = accel[1:] - accel[:-1]
     curv = np.diff(dpath) / LAYER_DIST
-    cacc = curv * vel_[:-1]**2
+    cacc = curv * vel[1:-1]**2
 
     # fr = sum(np.abs(np.where(vel_err < 0, vel_err, vel_err*2)))
     fr = sum(vel_err**2)
