@@ -10,6 +10,7 @@ from matplotlib.patches import Rectangle
 from behavioral import NoPathError, behav_cost, get_behav, get_freespace
 from constant import LAYER_DIST
 from state import State
+from motion import get_spline
 
 arr = np.array
 concat = np.concatenate
@@ -48,15 +49,25 @@ def plot(state, action):
     for i in range(state.depth):
         for j in range(state.width):
             ax1.add_patch(Rectangle(((i+.5), (j-.5)), 1, 1,
-                                    alpha=state.speed_lim[i, j]/10, color='red', zorder=-1))
-            ax1.text((i+.5), (j-.5), state.speed_lim[i, j].round())
+                                    alpha=(5-state.speed_lim[i, j])/10, color='red', zorder=-1))
             if state.static_obs[i, j]:
-                ax1.add_patch(Rectangle(((i+.5), (j-.5)), 1, 1))
-    ax1.scatter(xs, path, label='behav')
-    ax2.scatter(xs, vel)
+                ax1.add_patch(Rectangle(((i+.5), (j-.5)),
+                                        1, 1, color='cornflowerblue'))
+
+    ax1.scatter(xs, path, color='purple')
+    ax2.scatter(xs, vel, color='purple')
+
+    spline = get_spline(xs, path, 0, True)
+    # p_bc = spline(xs[-1], 1)[0]
+    xs_fine = np.linspace(xs[0], xs[-1], num=20)
+    ax1.plot(xs_fine, spline(xs_fine), '-', color='green', linewidth=0.7)
+
+    spline = get_spline(xs, vel, 0, True)
+    # v_bc = spline(xs[-1], 1)[0]
+    ax1.plot(xs_fine, spline(xs_fine), '-', color='green', linewidth=0.7)
+
     ax2.set_ylim(-3, 4)
     ax2.set_xlim(0, 3.5)
-    ax2.legend()
 
     plt.show()
 

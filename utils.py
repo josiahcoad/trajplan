@@ -19,7 +19,6 @@ def plot_eps(env):
     epstatic = np.vstack([statics[0], *[static[-mdist:]
                                         for static in statics[1:]]])
     _, (ax1, ax2) = plt.subplots(3, 1, sharex=True)
-    ax2twin = ax2.twinx()  # instantiate a second axes that shares the same x-axis
     for i in range(epspeed.shape[0]):
         for j in range(epspeed.shape[1]):
             ax1.add_patch(Rectangle(((i+.5), (j-.5)), 1, 1,
